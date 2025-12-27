@@ -1,0 +1,23 @@
+import sys
+from machine import Pin, I2C, soft_reset
+
+from scheduler import Condition, Message
+from common import exists, path_join
+
+coroutine = True
+
+
+def main(*args, **kwargs):
+    result = "invalid parameters"
+    args = kwargs["args"]
+    shell_id = kwargs["shell_id"]
+    try:
+        soft_reset() 
+        yield Condition.get().load(sleep = 0, send_msgs = [
+            Message.get().load({"output": "reboot ..."}, receiver = shell_id)
+        ])
+    except Exception as e:
+        yield Condition.get().load(sleep = 0, send_msgs = [
+            Message.get().load({"output": str(sys.print_exception(e))}, receiver = shell_id)
+        ])
+

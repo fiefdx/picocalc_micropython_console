@@ -1,0 +1,31 @@
+import gc
+import sys
+from machine import Pin, I2C
+
+from scheduler import Condition, Message
+from common import Resource
+
+coroutine = True
+
+
+def main(*args, **kwargs):
+    result = "invalid parameters"
+    args = kwargs["args"]
+    shell_id = kwargs["shell_id"]
+    shell = kwargs["shell"]
+    try:
+        gc.collect()
+        ram_free = gc.mem_free()
+        ram_used = gc.mem_alloc()
+        ram_total = ram_free + ram_used
+        b = Resource.keyboard.battery_status()
+        plugged_in = b["charging"]
+        level = b["level"]
+        monitor_msg = "CPU%s:%3d%% RAM:%3d%% BATTERY[%s]: %3d%%" % (shell.scheduler.cpu, int(100 - shell.scheduler.idle), int(100 - (ram_free * 100 / ram_total)), "C" if plugged_in else "D", level)
+        yield Condition.get().load(sleep = 0, send_msgs = [
+            Message.get().load({"output": monitor_msg}, receiver = shell_id)
+        ])
+    except Exception as e:
+        yield Condition.get().load(sleep = 0, send_msgs = [
+            Message.get().load({"output": str(sys.print_exception(e))}, receiver = shell_id)
+        ])
