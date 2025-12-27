@@ -5,3 +5,6 @@
 .edit_redo_cache.json
 .history
 .python_history
+*.json
+*.txt
+*.mpy
