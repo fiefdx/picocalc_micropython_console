@@ -1,0 +1,7 @@
+.DS_Store
+.chat_history
+.edit_cache.json
+.edit_history_cache.json
+.edit_redo_cache.json
+.history
+.python_history
