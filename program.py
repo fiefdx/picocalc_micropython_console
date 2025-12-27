@@ -20,24 +20,30 @@ This is a list of statements, ordered by
 line number.
 
 """
+import gc
 
 from basictoken import BASICToken as Token
 from basicparser import BASICParser
 from flowsignal import FlowSignal
 from lexer import Lexer
 
-
+from scheduler import Scheluder, Condition, Task, Message
 from dictfile import DictFile, DictFileSlow
-from listfile import ListFile
+from common import ticks_ms, ticks_add, ticks_diff, sleep_ms
+
 
 class BASICData:
 
-    def __init__(self):
+    def __init__(self, ram = False):
         # array of line numbers to represent data statements
-        self.__datastmts = DictFileSlow("/data_cache.json") # {}
+        if ram:
+            self.__datastmts = {}
+        else:
+            self.__datastmts = DictFileSlow("/basicdata.json")
 
         # Data pointer
         self.__next_data = 0
+        self.data_values = []
 
 
     def delete(self):
@@ -82,7 +88,7 @@ class BASICData:
             raise RuntimeError('No DATA statements available to READ ' +
                                'in line ' + str(read_line_number))
 
-        data_values = []
+        self.data_values.clear()
 
         line_numbers = list(self.__datastmts.keys())
         line_numbers.sort()
@@ -100,23 +106,23 @@ class BASICData:
         sign = 1
         for token in tokenlist[1:]:
             if token.category != Token.COMMA:
-                #data_values.append(token.lexeme)
+                #self.data_values.append(token.lexeme)
 
                 if token.category == Token.STRING:
-                    data_values.append(token.lexeme)
+                    self.data_values.append(token.lexeme)
                 elif token.category == Token.UNSIGNEDINT:
-                    data_values.append(sign*int(token.lexeme))
+                    self.data_values.append(sign*int(token.lexeme))
                 elif token.category == Token.UNSIGNEDFLOAT:
-                    data_values.append(sign*eval(token.lexeme))
+                    self.data_values.append(sign*eval(token.lexeme))
                 elif token.category == Token.MINUS:
                     sign = -1
                 #else:
-                    #data_values.append(token.lexeme)
+                    #self.data_values.append(token.lexeme)
             else:
                 sign = 1
 
 
-        return data_values
+        return self.data_values
 
     def restore(self,restoreLineNo):
         if restoreLineNo == 0 or restoreLineNo in self.__datastmts:
@@ -140,11 +146,16 @@ class BASICData:
 
 
 class Program:
+    print = None
 
-    def __init__(self):
+    def __init__(self, ram = False):
         # Dictionary to represent program
         # statements, keyed by line number
-        self.__program = DictFileSlow("/program_cache.json") # {}
+        #self.__program = {}
+        if ram:
+            self.__program = {}
+        else:
+            self.__program = DictFileSlow("/program.json")
 
         # Program counter
         self.__next_stmt = 0
@@ -156,7 +167,9 @@ class Program:
         self.__return_loop = {}
 
         # Setup DATA object
-        self.__data = BASICData()
+        self.__data = BASICData(ram = ram)
+        self.__parser = BASICParser(None)
+        BASICParser.print = self.print
 
     def __str__(self):
 
@@ -195,7 +208,7 @@ class Program:
 
         for line_number in line_numbers:
             if int(line_number) >= start_line and int(line_number) <= end_line:
-                print(self.str_statement(line_number), end="")
+                self.print(self.str_statement(line_number), end = '')
 
     def save(self, file):
         """Save the program
@@ -227,10 +240,18 @@ class Program:
         try:
             lexer = Lexer()
             with open(file, "r") as infile:
-                for line in infile:
-                    line = line.replace("\r", "").replace("\n", "").strip()
+                line = infile.readline()
+                line = line.replace("\r", "").replace("\n", "").strip()
+                while line:
                     tokenlist = lexer.tokenize(line)
                     self.add_stmt(tokenlist)
+                    line = infile.readline()
+                    line = line.replace("\r", "").replace("\n", "").strip()
+                
+                #for line in infile:
+                #    line = line.replace("\r", "").replace("\n", "").strip()
+                #    tokenlist = lexer.tokenize(line)
+                #    self.add_stmt(tokenlist)
 
         except OSError:
             raise OSError("Could not read file")
@@ -273,7 +294,7 @@ class Program:
 
         return line_numbers
 
-    def __execute(self, line_number):
+    def __execute(self, line_number, execute_print = None):
         """Execute the statement with the
         specified line number
 
@@ -283,11 +304,12 @@ class Program:
         how to branch if necessary, None otherwise
 
         """
-        if line_number not in self.__program.keys():
+        if line_number not in self.__program:
             raise RuntimeError("Line number " + line_number +
                                " does not exist")
 
         statement = self.__program[line_number]
+        #execute_print("%s: [%s]" % (line_number, statement))
 
         try:
             return self.__parser.parse(statement, line_number)
@@ -295,14 +317,23 @@ class Program:
         except RuntimeError as err:
             raise RuntimeError(str(err))
 
-    def execute(self):
+    def execute(self, task, name, execute_print = None, shell = None):
         """Execute the program"""
-
-        self.__parser = BASICParser(self.__data)
+        
+        BASICParser.print = execute_print
+        self.__parser.__data = self.__data
+        self.__parser.print = execute_print
+        self.__parser.clear()
+        gc.collect()
         self.__data.restore(0) # reset data pointer
 
         line_numbers = self.line_numbers()
-
+        frame = shell.input_counter
+        frame_previous = frame
+        n = 0
+        stop = False
+        s = ticks_ms()
+        
         if len(line_numbers) > 0:
             # Set up an index into the ordered list
             # of line numbers that can be used for
@@ -314,8 +345,42 @@ class Program:
 
             # Run through the program until the
             # has line number has been reached
-            while True:
-                flowsignal = self.__execute(self.get_next_line_number())
+            gc_n = 0
+            while not stop:
+                # execute_print("%s-%s-%s-%s" % (len(self.__program), len(self.__return_stack), len(self.__return_loop), len(self.__data.__datastmts)), end = '\n', terminated = True)
+                msg = task.get_message()
+                if msg:
+                    if msg.content["msg"] == "Ctrl-C":
+                        msg.release()
+                        execute_print("Program terminated", end = '\n', terminated = True)
+                        stop = True
+                        # raise StopIteration
+                    msg.release()
+                frame = shell.input_counter
+                if frame != frame_previous:
+                    frame_previous = frame
+                    s = ticks_ms()
+                    yield Condition.get().load(sleep = 0)
+                elif ticks_diff(ticks_ms(), s) >= 250:
+                    s = ticks_ms()
+                    gc_n += 1
+                    if gc_n >= 2:
+                        gc_n = 0
+                        gc.collect()
+                    yield Condition.get().load(sleep = 0)
+                flowsignal = self.__execute(self.get_next_line_number(), execute_print)
+                if flowsignal == "_wait":
+                    shell.wait_for_input = True
+                    yield Condition.get().load(sleep = 0, wait_msg = True)
+                    msg = task.get_message()
+                    if msg.content["msg"] == "Ctrl-C":
+                        msg.release()
+                        execute_print("Program terminated", end = '\n', terminated = True)
+                        stop = True
+                        # raise StopIteration
+                    self.__parser.__input_value = msg.content["msg"]
+                    msg.release()
+                    flowsignal = self.__execute(self.get_next_line_number(), execute_print)
                 self.__parser.last_flowsignal = flowsignal
 
                 if flowsignal:
@@ -325,6 +390,8 @@ class Program:
                             index = line_numbers.index(flowsignal.ftarget)
 
                         except ValueError:
+                            shell.run_program_id = None
+                            execute_print("", end = "\n", terminated = True)
                             raise RuntimeError("Invalid line number supplied in GOTO or conditional branch: "
                                                + str(flowsignal.ftarget))
 
@@ -338,6 +405,8 @@ class Program:
                             self.__return_stack.append(line_numbers[index + 1])
 
                         else:
+                            shell.run_program_id = None
+                            execute_print("", end = "\n", terminated = True)
                             raise RuntimeError("GOSUB at end of program, nowhere to return")
 
                         # Set the index to be the subroutine start line
@@ -346,6 +415,8 @@ class Program:
                             index = line_numbers.index(flowsignal.ftarget)
 
                         except ValueError:
+                            shell.run_program_id = None
+                            execute_print("", end = "\n", terminated = True)
                             raise RuntimeError("Invalid line number supplied in subroutine call: "
                                                + str(flowsignal.ftarget))
 
@@ -358,10 +429,14 @@ class Program:
                             index = line_numbers.index(self.__return_stack.pop())
 
                         except ValueError:
+                            shell.run_program_id = None
+                            execute_print("", end = "\n", terminated = True)
                             raise RuntimeError("Invalid subroutine return in line " +
                                                str(self.get_next_line_number()))
 
                         except IndexError:
+                            shell.run_program_id = None
+                            execute_print("", end = "\n", terminated = True)
                             raise RuntimeError("RETURN encountered without corresponding " +
                                                "subroutine call in line " + str(self.get_next_line_number()))
 
@@ -385,6 +460,8 @@ class Program:
 
                         else:
                             # Reached end of program
+                            shell.run_program_id = None
+                            execute_print("", end = "\n", terminated = True)
                             raise RuntimeError("Program terminated within a loop")
 
                     elif flowsignal.ftype == FlowSignal.LOOP_SKIP:
@@ -393,6 +470,17 @@ class Program:
                         # NEXT statement
                         index = index + 1
                         while index < len(line_numbers):
+                            msg = task.get_message()
+                            if msg:
+                                if msg.content["msg"] == "Ctrl-C":
+                                    msg.release()
+                                    execute_print("Program terminated", end = '\n', terminated = True)
+                                    # raise StopIteration
+                                    stop = True
+                                    break
+                                msg.release()
+                            yield Condition.get().load(sleep = 0)
+                            
                             next_line_number = line_numbers[index]
                             temp_tokenlist = self.__program[next_line_number]
 
@@ -423,10 +511,14 @@ class Program:
                             index = line_numbers.index(self.__return_loop.pop(flowsignal.floop_var))
 
                         except ValueError:
+                            shell.run_program_id = None
+                            execute_print("", end = "\n", terminated = True)
                             raise RuntimeError("Invalid loop exit in line " +
                                                str(self.get_next_line_number()))
 
                         except KeyError:
+                            execute_print("", end = "\n", terminated = True)
+                            shell.run_program_id = None
                             raise RuntimeError("NEXT encountered without corresponding " +
                                                "FOR loop in line " + str(self.get_next_line_number()))
 
@@ -441,9 +533,14 @@ class Program:
                     else:
                         # Reached end of program
                         break
-
+                n += 1
+                #yield Condition(sleep = 0)
         else:
+            shell.run_program_id = None
+            execute_print("", end = "\n", terminated = True)
             raise RuntimeError("No statements to execute")
+        shell.run_program_id = None
+        execute_print("", end = "\n", terminated = True)
 
     def delete(self):
         """Deletes the program by emptying the dictionary"""
