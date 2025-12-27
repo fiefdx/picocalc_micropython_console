@@ -181,7 +181,9 @@ class Explorer(object):
             pointer = [[0, self.pointer_row * 11 + 10, 320, 12, C.cyan]]
         elif self.mode == "edit":
             f = self.editor.get_frame()
-            frame = f["frame"]
+            frame = None
+            if "frame" in f:
+                frame = f["frame"]
             if "render" in f:
                 for r in f["render"]:
                     render.append(r)
@@ -241,7 +243,8 @@ class Explorer(object):
             pointer = [[0, 10, 320, 12, C.white]]
 #             contents.append({"s": self.new_name, "c": " ", "x": 3, "y": 11})
         data["render"] = render
-        data["frame"] = frame
+        if frame is not None:
+            data["frame"] = frame
         data["clean_pointer"] = clean_pointer
         data["pointer"] = pointer
         data["borders"] = borders

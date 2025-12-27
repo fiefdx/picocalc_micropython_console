@@ -94,6 +94,8 @@ def render_texts(name, msg, lcd):
         c = text["c"]
         s = text["s"]
         color = text["C"] if "C" in text else 0
+        if isinstance(c, int):
+            lcd.clear_line(x, y, C.black, line_height = 8, width_offset = -2, x_offset = 1, y_offset = 0, length = c)
         lcd.text(s, x, y, color)
 
 
@@ -202,7 +204,7 @@ def display(task, name, scheduler = None):
 # #                                 tt = ticks_ms()
 # #                                 print("update line: ", tt - t)
                         refresh = True
-#                         frame_previous = frame
+                        frame_previous = frame
                     if "cursor" in msg.content:
                         refresh = True
                         x, y, c = msg.content["cursor"]
@@ -405,6 +407,7 @@ def keyboard_input(task, name, scheduler = None, interval = 50, shell_id = None,
     }
     Resource.keyboard = k
     yield Condition.get().load(sleep = 1000)
+    key_sound = const(2000)
     keys = bytearray(30)
     while True:
         try:
@@ -434,14 +437,44 @@ def keyboard_input(task, name, scheduler = None, interval = 50, shell_id = None,
                                 key = code.decode()
                             print("key2: ", key)
                             if scheduler.shell and scheduler.shell.session_task_id and scheduler.exists_task(scheduler.shell.session_task_id):
+                                yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
                                 yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"msg": key, "keys": []}, receiver = scheduler.shell.session_task_id)])
                             else:
+                                yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
                                 yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"char": key}, receiver = shell_id)])
                         except:
                             print("Except: ", code)
         except Exception as e:
             print(e)
         yield Condition.get().load(sleep = interval)
+        
+        
+def sound_output(task, name, scheduler = None):
+    while True:
+        try:
+            yield Condition.get().load(sleep = 0, wait_msg = True)
+            msg = task.get_message()
+            tone_freq = msg.content["freq"]
+            tone_length = msg.content["length"]
+            tone_volume = msg.content["volume"]
+            left_pwm = PWM(Pin(26))
+            right_pwm = PWM(Pin(27))
+            if tone_freq >= 20:
+                left_pwm.freq(tone_freq)
+                right_pwm.freq(tone_freq)
+                left_pwm.duty_u16(tone_volume)
+                right_pwm.duty_u16(tone_volume)
+            if tone_length < 10:
+                sleep_ms(tone_length)
+            else:
+                yield Condition.get().load(sleep = tone_length)
+            left_pwm.duty_u16(0)
+            right_pwm.duty_u16(0)
+            left_pwm.deinit()
+            right_pwm.deinit()
+            msg.release()
+        except Exception as e:
+            print(e)
 
 
 if __name__ == "__main__":
@@ -454,6 +487,8 @@ if __name__ == "__main__":
         display_id = s.add_task(Task.get().load(display, "display", condition = Condition.get(), kwargs = {"scheduler": s}))
         monitor_id = s.add_task(Task.get().load(monitor, "monitor", condition = Condition.get(), kwargs = {"scheduler": s, "display_id": display_id}))
         storage_id = s.add_task(Task.get().load(storage, "storage", condition = Condition.get(), kwargs = {"scheduler": s}))
+        sound_id = s.add_task(Task.get().load(sound_output, "sound_output", condition = Condition.get(), kwargs = {"scheduler": s}))
+        s.sound_id = sound_id
         shell_id = s.add_task(Task.get().load(shell, "shell", condition = Condition.get(), kwargs = {"scheduler": s, "display_id": display_id, "storage_id": storage_id}))
         s.shell_id = shell_id
         s.set_log_to(shell_id)

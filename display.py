@@ -285,3 +285,6 @@ class ILI9488(framebuf.FrameBuffer):
             
     def show(self):
         self.block(0, 0, self.width, self.height, self)
+        
+    def clear_line(self, x, y, color, line_height = 8, width_offset = 0, x_offset = 0, y_offset = 0, length = 40, font_width = 8):
+        self.rect(x + x_offset, y + y_offset, length * font_width + width_offset, line_height, color, True)

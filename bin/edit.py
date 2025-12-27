@@ -1,5 +1,6 @@
 import os
 import gc
+import re
 import sys
 import time
 import random
@@ -17,6 +18,20 @@ coroutine = True
 
 
 class EditShell(object):
+    PY_KEYWORDS = (
+        "False", "None", "True",
+        "and", "as", "assert", "async", "await", "break", "class", "continue",
+        "def", "del", "elif", "else", "except", "enumerate", "finally", "for", "from",
+        "global", "if", "import", "in", "is", "lambda", "nonlocal", "not",
+        "or", "pass", "raise", "range", "return", "try", "while", "with", "yield",
+        "=", "self",
+    )
+    RS = []
+    for i in range(len(PY_KEYWORDS) // 8 + 1):
+        kw_alternation = '|'.join(PY_KEYWORDS[i * 8: i * 8 + 8])
+        r = re.compile(r'(^|\s+)(' + kw_alternation + r')(\s+|[\s.:(]|$)')
+        RS.append(r)
+
     def __init__(self, file_path, display_size = (40, 29), cache_size = 28, ram = False):
         self.display_width = display_size[0]
         self.display_height = display_size[1]
@@ -48,6 +63,11 @@ class EditShell(object):
         self.select_start_col = 0
         self.exit_count = 0
         self.chat = Chat(host = "", port = 11434, model = "llama3.2:1b")
+        self.highlight = self.file_path.endswith(".py")
+        self.frame_previous = None
+        self.frame_force_update = False
+        self.previous_offset_row = 0
+        self.previous_offset_col = 0
         
     def input_char(self, c):
         if self.mode == "edit":
@@ -75,6 +95,7 @@ class EditShell(object):
                 self.offset_col = 0
                 op.append((self.cursor_col, self.cursor_row, self.display_offset_col, self.display_offset_row, self.offset_col))
                 self.edit_history.append(op)
+                self.frame_force_update = True
             elif c == "\b":
                 self.status = "changed"
                 self.exit_count = 0
@@ -102,6 +123,7 @@ class EditShell(object):
                             op[3] = self.cache[self.cursor_row]
                             self.cache[self.cursor_row] += current_line
                             self.edit_history.append(op)
+                self.frame_force_update = True
             elif c == "UP" or c == "SUP":
                 self.cursor_move_up()
             elif c == "DN" or c == "SDN":
@@ -124,18 +146,24 @@ class EditShell(object):
                     fp.write(line + "\n")
                 fp.close()
                 self.status = "saved"
+                self.frame_force_update = True
             elif c == "Ctrl-A":
                 self.redo()
+                self.frame_force_update = True
             elif c == "Ctrl-Z":
                 self.undo()
+                self.frame_force_update = True
             elif c == "Ctrl-B":
                 self.mode = "select"
                 self.select_start_row = self.cursor_row
                 self.select_start_col = self.cursor_col + self.offset_col
+                self.frame_force_update = True
             elif c == "Ctrl-V":
                 self.paste()
+                self.frame_force_update = True
             elif c == "Ctrl-G":
                 self.generate_with_chat()
+                self.frame_force_update = True
             elif c == "ES":
                 if self.status == "saved":
                     self.exit = True
@@ -149,6 +177,7 @@ class EditShell(object):
                 self.append_edit_operation()
                 self.cache[self.cursor_row] = self.cache[self.cursor_row][:self.cursor_col + self.offset_col] + c + self.cache[self.cursor_row][self.cursor_col + self.offset_col:]
                 self.cursor_move_right()
+                self.frame_force_update = True
         elif self.mode == "select":
             if c == "UP" or c == "SUP":
                 self.cursor_move_up()
@@ -177,6 +206,7 @@ class EditShell(object):
             elif c == "ES":
                 self.previous_mode = self.mode
                 self.mode = "edit"
+            self.frame_force_update = True
 
     def append_edit_operation(self):
         if self.cursor_row != self.edit_last_line:
@@ -220,14 +250,67 @@ class EditShell(object):
         
     def exists_line(self, line_num):
         return line_num >= 0 and line_num < self.total_lines
+    
+    def comment_line(self, line, start, end, row):
+        result = []
+        s = line.find("#")
+        if s >= 0:
+            comment = line[s:]
+            if s >= start:
+                result.append({"s": comment, "c": " ", "x": (s - start) * 8, "y": row * 11 + 1, "C": C.blue})
+            else:
+                comment = comment[start - s:]
+                result.append({"s": comment, "c": " ", "x": 0, "y": row * 11 + 1, "C": C.blue})
+        return result
+    
+    def highlight_line(self, line, start, end, row):
+        result = []
+        line = line.split("#")[0]
+        for r in EditShell.RS:
+            pos = 0
+            while True:
+                m = r.search(line, pos)
+                if not m:                     # no more keywords on this line
+                    break
+                key = line[m.start():m.end()]
+                key = key.rstrip(" :(.")
+                s = key.rfind(" ") + 1
+                key = key[s:]
+                ks = m.start() + s
+                ke = ks + len(key)
+                if ks >= start and ke <= end:
+                    result.append({"s": key, "c": " ", "x": (ks - start) * 8, "y": row * 11 + 1, "C": C.red})
+                elif ks < start and ke > start:
+                    key = key[start - ks:]
+                    result.append({"s": key, "c": " ", "x": 0, "y": row * 11 + 1, "C": C.red})
+                elif ks < end and ke > end:
+                    key = key[:-(ke - end)]
+                    result.append({"s": key, "c": " ", "x": (ks - start) * 8, "y": row * 11 + 1, "C": C.red})
+                pos = m.end()
+        return result
 
     def get_frame(self):
+        frame, highlights = self.cache_to_frame()
+        status = "{progress: <25}{mode: >8}{status: >7}".format(
+            progress = "%s/%s/%s" % (self.cursor_col + self.offset_col, self.cursor_row + 1, len(self.cache)),
+            mode = "% 7s " % self.mode,
+            status = self.status,
+        )
         data = {
-            "frame": self.cache_to_frame(),
             "cursor": self.get_cursor_position(1),
+            "render": (("clear_lines", "lines"), ("selects", "lines"), ("highlights", "texts"), ("status_bottom", "texts")),
+            "clear_lines": [],
+            "selects": [],
+            "highlights": [],
+            "status_bottom": [{"s": status, "c": 40, "x": 0, "y": 28 * 11 + 1, "C": C.cyan}]
         }
+        if frame is not None:
+            data["frame"] = frame
+        if highlights is not None:
+            data["highlights"] = highlights
+        
         if self.mode == "select":
-            data["render"] = (("clear_lines", "lines"), ("selects", "lines"))
+#             data["render"] = render
             clears = []
             for i in range(28):
                 clears.append([1, i * 11 + 9, 318, i * 11 + 9, C.black])
@@ -238,11 +321,12 @@ class EditShell(object):
             data["selects"] = selects
         elif self.previous_mode == "select":
             self.previous_mode = self.mode
-            data["render"] = (("clear_lines", "lines"), )
+#             data["render"] = render
             clears = []
             for i in range(28):
                 clears.append([1, i * 11 + 9, 318, i * 11 + 9, C.black])
             data["clear_lines"] = clears
+                
         return data
 
     def get_loading_frame(self, p):
@@ -254,18 +338,38 @@ class EditShell(object):
             self.cursor_col = 0
         return ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", msg]
             
+    def need_update_frame(self):
+        if self.frame_previous is None:
+            return True
+        if self.frame_force_update:
+            self.frame_force_update = False
+            return True
+        if self.display_offset_row != self.previous_offset_row or self.offset_col != self.previous_offset_col:
+            return True
+        return False
+    
     def cache_to_frame(self):
         frame = []
-        for line in self.cache[self.display_offset_row: self.display_offset_row + self.cache_size]:
-            frame.append(line[self.offset_col: self.offset_col + self.display_width])
-        for i in range(self.cache_size - len(frame)):
-            frame.append("")
-        frame.append("{progress: <25}{mode: >8}{status: >7}".format(
-            progress = "%s/%s/%s" % (self.cursor_col + self.offset_col, self.cursor_row + 1, len(self.cache)),
-            mode = "% 7s " % self.mode,
-            status = self.status)
-        )
-        return frame
+        highlights = []
+        if self.need_update_frame():
+            for n, line in enumerate(self.cache[self.display_offset_row: self.display_offset_row + self.cache_size]):
+                frame.append(line[self.offset_col: self.offset_col + self.display_width])
+                if self.highlight:
+                    highlights.extend(self.highlight_line(line, self.offset_col, self.offset_col + self.display_width, n))
+                    highlights.extend(self.comment_line(line, self.offset_col, self.offset_col + self.display_width, n))
+            for i in range(self.cache_size - len(frame)):
+                frame.append("")
+#             frame.append("{progress: <25}{mode: >8}{status: >7}".format(
+#                 progress = "%s/%s/%s" % (self.cursor_col + self.offset_col, self.cursor_row + 1, len(self.cache)),
+#                 mode = "% 7s " % self.mode,
+#                 status = self.status)
+#             )
+            self.frame_previous = True
+            self.previous_offset_row = self.display_offset_row
+            self.previous_offset_col = self.offset_col
+            return frame, highlights
+        else:
+            return None, None
     
     def get_cursor_position(self, c = None):
         return self.cursor_col, self.cursor_row - self.display_offset_row, self.cursor_color if c is None else c
@@ -475,7 +579,7 @@ class EditShell(object):
                 self.cursor_col = 0
                 if self.offset_col > 0:
                     self.offset_col -= 1
-                    self.cache_to_frame()
+#                     self.cache_to_frame()
                 else:
                     if self.cursor_row > 0:
                         self.cursor_row -= 1
@@ -495,7 +599,7 @@ class EditShell(object):
         if len(self.cache[self.cursor_row]) >= self.cursor_col + self.offset_col:
             if self.cursor_col > self.display_width:
                 self.offset_col += 1
-                self.cache_to_frame()
+#                 self.cache_to_frame()
                 self.cursor_col = self.display_width
         else:
             self.cursor_col -= 1
@@ -512,7 +616,7 @@ class EditShell(object):
             self.cursor_col += self.display_width // 4
             if self.offset_col < 0:
                 self.offset_col = 0
-            self.cache_to_frame()
+#             self.cache_to_frame()
         elif self.offset_col == 0:
             self.cursor_col = 0
     
@@ -520,7 +624,7 @@ class EditShell(object):
         self.offset_col += self.display_width // 4
         if len(self.cache[self.cursor_row]) < self.cursor_col + self.offset_col:
             self.cursor_col = len(self.cache[self.cursor_row]) - self.offset_col
-        self.cache_to_frame()
+#         self.cache_to_frame()
 
     def undo(self):
         if len(self.edit_history) > 0:
