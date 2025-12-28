@@ -87,6 +87,43 @@ def monitor(task, name, scheduler = None, display_id = None):
         )
 
 
+def render_bricks(name, msg, lcd):
+    offset_x = msg.content[name]["offset_x"]
+    offset_y = msg.content[name]["offset_y"]
+    width = msg.content[name]["width"]
+    height = msg.content[name]["height"]
+    brick_size = msg.content[name]["size"]
+    data = msg.content[name]["data"]
+    for w in range(width):
+        x = w * brick_size + offset_x
+        for h in range(height):
+            y = h * brick_size + offset_y
+            if data[h][w] == "o":
+                lcd.rect(x, y, brick_size, brick_size, C.black)
+                lcd.rect(x + 2, y + 2, brick_size - 4, brick_size - 4, C.black)
+            elif data[h][w] == "x":
+                lcd.rect(x, y, brick_size, brick_size, C.white)
+                lcd.rect(x + 2, y + 2, brick_size - 4, brick_size - 4, C.white)
+#     if brick_size == 6:
+#         for w in range(width):
+#             x = w * brick_size + offset_x
+#             for h in range(height):
+#                 y = h * brick_size + offset_y
+#                 if data[h][w] == "o":
+#                     lcd.rect(x, y, brick_size, brick_size, C.black)
+#                 elif data[h][w] == "x":
+#                     lcd.rect(x, y, brick_size, brick_size, C.white)
+#     elif brick_size == 4:
+#         for w in range(width):
+#             x = w * brick_size + offset_x
+#             for h in range(height):
+#                 y = h * brick_size + offset_y
+#                 if data[h][w] == "o":
+#                     lcd.rect(x, y, brick_size, brick_size, C.black)
+#                 elif data[h][w] == "x":
+#                     lcd.rect(x, y, brick_size, brick_size, C.white)
+
+
 def render_texts(name, msg, lcd):
     for text in msg.content[name]:
         x = text["x"]
@@ -96,7 +133,10 @@ def render_texts(name, msg, lcd):
         color = text["C"] if "C" in text else 0
         if isinstance(c, int):
             lcd.clear_line(x, y, C.black, line_height = 8, width_offset = -2, x_offset = 1, y_offset = 0, length = c)
-        lcd.text(s, x, y, color)
+        if isinstance(s, int):
+            lcd.clear_line(x, y, C.black, line_height = 8, width_offset = -2, x_offset = 1, y_offset = 0, length = s)
+        else:
+            lcd.text(s, x, y, color)
 
 
 def render_lines(name, msg, lcd):
@@ -114,6 +154,7 @@ def render_rects(name, msg, lcd):
 def render(category, msg, lcd, refresh):
     name, render_type = category
     renders = {
+        "bricks": (render_bricks, [name, msg, lcd]),
         "texts": (render_texts, [name, msg, lcd]),
         "lines": (render_lines, [name, msg, lcd]),
         "rects": (render_rects, [name, msg, lcd]),
@@ -411,42 +452,47 @@ def keyboard_input(task, name, scheduler = None, interval = 50, shell_id = None,
     keys = bytearray(30)
     while True:
         try:
-            n = k.readinto(keys)
-            if n is not None:
-                print("size: ", n)
-                print("keys: ", keys[:n])
-                if n == 1 or n == 2:
-                    code = bytes(keys[:n])
-                    print("code: ", code, code in key_map)
-                    if code not in key_map_ignore:
-                        try:
-#                             key = code.decode()
-#                             print("key1: ", key)
-#                             if n == 2 and code.find(b'\x1b') == 0:
-#                                 if key[1] == "S":
-#                                     key = "SAVE"
-#                                 elif key[1] == "C":
-#                                     key = "Ctrl-C"
-#                                 elif key[1] == "X":
-#                                     key = "Ctrl-X"
-#                                 elif key[1] == "V":
-#                                     key = "Ctrl-V"
-                            if code in key_map:
-                                key = key_map[code]
-                            else:
-                                key = code.decode()
-                            print("key2: ", key)
-                            if scheduler.shell and scheduler.shell.session_task_id and scheduler.exists_task(scheduler.shell.session_task_id):
-                                yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
-                                yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"msg": key, "keys": []}, receiver = scheduler.shell.session_task_id)])
-                            else:
-                                yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
-                                yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"char": key}, receiver = shell_id)])
-                        except:
-                            print("Except: ", code)
+            if k.disable:
+                yield Condition.get().load(sleep = 1000)
+            else:
+                yield Condition.get().load(sleep = interval)
+                n = k.readinto(keys)
+                if n is not None:
+                    # print("size: ", n)
+                    # print("keys: ", keys[:n])
+                    if n == 1 or n == 2:
+                        code = bytes(keys[:n])
+                        # print("code: ", code, code in key_map)
+                        if code not in key_map_ignore:
+                            try:
+    #                             key = code.decode()
+    #                             print("key1: ", key)
+    #                             if n == 2 and code.find(b'\x1b') == 0:
+    #                                 if key[1] == "S":
+    #                                     key = "SAVE"
+    #                                 elif key[1] == "C":
+    #                                     key = "Ctrl-C"
+    #                                 elif key[1] == "X":
+    #                                     key = "Ctrl-X"
+    #                                 elif key[1] == "V":
+    #                                     key = "Ctrl-V"
+                                if code in key_map:
+                                    key = key_map[code]
+                                else:
+                                    key = code.decode()
+                                # print("key2: ", key)
+                                if scheduler.shell and scheduler.shell.session_task_id and scheduler.exists_task(scheduler.shell.session_task_id):
+                                    yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
+                                    yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"msg": key, "keys": [key]}, receiver = scheduler.shell.session_task_id)])
+                                else:
+                                    yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
+                                    yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"char": key}, receiver = shell_id)])
+                            except:
+                                pass
+                                # print("Except: ", code)
         except Exception as e:
             print(e)
-        yield Condition.get().load(sleep = interval)
+#         yield Condition.get().load(sleep = interval)
         
         
 def sound_output(task, name, scheduler = None):
@@ -491,8 +537,8 @@ if __name__ == "__main__":
         s.sound_id = sound_id
         shell_id = s.add_task(Task.get().load(shell, "shell", condition = Condition.get(), kwargs = {"scheduler": s, "display_id": display_id, "storage_id": storage_id}))
         s.shell_id = shell_id
-        s.set_log_to(shell_id)
-        keyboard_id = s.add_task(Task.get().load(keyboard_input, "keyboard_input", condition = Condition.get(), kwargs = {"scheduler": s, "interval": 30, "shell_id": shell_id, "display_id": display_id}))
+#         s.set_log_to(shell_id)
+        keyboard_id = s.add_task(Task.get().load(keyboard_input, "keyboard_input", condition = Condition.get(), kwargs = {"scheduler": s, "interval": 20, "shell_id": shell_id, "display_id": display_id}))
         led.on()
         # led.off()
         s.run()
