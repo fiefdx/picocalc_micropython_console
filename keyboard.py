@@ -41,6 +41,7 @@ class Keyboard:
         self.isShift = False
         self.isCtrl = False
         self.isAlt = False
+        self.disable = False
 
     def ignor_mod(self):
         self.ignor = True
