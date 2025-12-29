@@ -156,8 +156,8 @@ class Explorer(object):
         contents = []
         borders = [[0, 0, 320, 11, C.white], [0, 0, 320, 319, C.white], [0, 307, 320, 12, C.white]]
         status = [
-            {"s": "%s/%s/%s         " % (self.current_page + 1, self.total_pages, self.total), "c": " ", "x": 3, "y": 310},
-            {"s": "% 20s" % self.warning, "c": " ", "x": 151, "y": 310}
+            {"s": "%s/%s/%s         " % (self.current_page + 1, self.total_pages, self.total), "c": 20, "x": 3, "y": 310, "C": C.cyan},
+            {"s": "% 20s" % self.warning, "c": 20, "x": 151, "y": 310, "C": C.red}
         ]
         render = [("clean_pointer", "rects"), ("border_lines", "lines"), ("borders", "rects"), ("status", "texts"), ("pointer", "rects"), ("contents", "texts")]
         data = {}

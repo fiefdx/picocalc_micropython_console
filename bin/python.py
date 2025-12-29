@@ -7,6 +7,7 @@ from io import StringIO
 from shell import Shell
 from scheduler import Condition, Message
 from common import exists, path_join, isfile, isdir, path_split
+from display import Colors as C
 
 coroutine = True
 
@@ -145,19 +146,36 @@ class PyShell(Shell):
             self.cache.pop(0)
         self.current_row = len(self.cache) - 1
         self.current_col = len(self.cache[-1])
+        
+    def write_lines(self, lines, end = False):
+        lines = lines.split("\n")
+        for n, line in enumerate(lines):
+            line = line.replace("\r", "")
+            line = line.replace("\n", "")
+            if n == len(lines) - 1 and line == "":
+                continue
+            self.cache.append(line)
+            if len(self.cache) > self.cache_lines:
+                self.cache.pop(0)
+            self.current_row = len(self.cache) - 1
+            self.current_col = len(self.cache[-1])
+        if end:
+            self.write_char("\n")
+        self.cache_to_frame_history()
 
     def update_stats(self, d):
-        self.stats = "[ C%3d%%|R%3d%%:%6.2fK|D %4dK|B[%s] %3d%%]" % (d[1], d[2], d[3] / 1024, d[6] / 1024, "C" if d[8] else "D", d[9])
+        self.stats = "C%3d%%|R%3d%%:%6.2fK|D %4dK |B[%s] %3d%%" % (d[1], d[2], d[3] / 1024, d[6] / 1024, "C" if d[8] else "D", d[9])
 
     def get_display_frame(self, c = None):
         data = {}
         frame = self.cache_to_frame()[-self.display_height:]
-        frame.append(self.stats)
+        data["render"] = (("status", "texts"), )
         data["frame"] = frame
-        data["cursor"] = self.get_cursor_position(c)
+        data["cursor"] = self.get_cursor_position(1)
+        data["status"] = [{"s": self.stats, "c": 40, "x": 0, "y": 310, "C": C.cyan}]
         if self.loading:
-            data["render"] = (("borders", "rects"),)
-            data["borders"] =[] # [[0, 0, 256, 127, 1], [0, 119, 256, 8, 1]]
+            # data["render"] = (("borders", "rects"),)
+            # data["borders"] =[] # [[0, 0, 256, 127, 1], [0, 119, 256, 8, 1]]
             self.loading = False
         return data
 

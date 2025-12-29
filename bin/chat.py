@@ -8,6 +8,7 @@ from shell import Shell
 from scheduler import Condition, Message
 from ollama import Chat
 from common import exists, path_join, isfile, isdir, mkdirs, path_split
+from display import Colors as C
 
 coroutine = True
 
@@ -171,12 +172,13 @@ class ChatShell(Shell):
     def get_display_frame(self, c = None):
         data = {}
         frame = self.cache_to_frame()[-self.display_height:]
-        frame.append(self.stats)
+        data["render"] = (("status", "texts"), )
         data["frame"] = frame
-        data["cursor"] = self.get_cursor_position(c)
+        data["cursor"] = self.get_cursor_position(1)
+        data["status"] = [{"s": self.stats, "c": 40, "x": 0, "y": 310, "C": C.cyan}]
         if self.loading:
-            data["render"] = (("borders", "rects"),)
-            data["borders"] = [] # [[0, 0, 256, 127, 1], [0, 119, 256, 8, 1]]
+            # data["render"] = (("borders", "rects"),)
+            # data["borders"] = [] # [[0, 0, 256, 127, 1], [0, 119, 256, 8, 1]]
             self.loading = False
         return data
 
