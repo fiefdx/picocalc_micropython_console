@@ -172,8 +172,12 @@ class EditShell(object):
             elif c == "Ctrl-V":
                 self.paste()
                 self.frame_force_update = True
-            elif c == "Ctrl-G":
+            elif c == "Ctrl-Q":
                 self.generate_with_chat()
+                self.frame_force_update = True
+            elif c == "Ctrl-G":
+                self.mode = "goto"
+                self.goto_str = ""
                 self.frame_force_update = True
             elif c == "ES":
                 if self.status == "saved":
@@ -218,6 +222,21 @@ class EditShell(object):
                 self.previous_mode = self.mode
                 self.mode = "edit"
                 self.copy_into_clipboard(cut = True)
+            elif c == "ES":
+                self.previous_mode = self.mode
+                self.mode = "edit"
+            self.frame_force_update = True
+        elif self.mode == "goto":
+            if c.isdigit():
+                self.goto_str += c
+            elif c == "\b":
+                if len(self.goto_str) > 0:
+                    self.goto_str = self.goto_str[:-1]
+            elif c == "\n":
+                self.previous_mode = self.mode
+                self.mode = "edit"
+                if len(self.goto_str) > 0:
+                    self.goto(int(self.goto_str))
             elif c == "ES":
                 self.previous_mode = self.mode
                 self.mode = "edit"
@@ -496,13 +515,13 @@ class EditShell(object):
         question = self.cache[self.cursor_row]
         for i in range(4):
             cmd = self.cache[i]
-            if cmd.startswith("set model:"):
+            if cmd.startswith("# set model:"):
                 self.chat.model = ":".join(cmd.split(":")[1:]).strip()
-            elif cmd.startswith("set ctx:"):
+            elif cmd.startswith("# set ctx:"):
                 self.chat.context_length = int(cmd.split(":")[-1].strip())
-            elif cmd.startswith("set host:"):
+            elif cmd.startswith("# set host:"):
                 self.chat.host = cmd.split(":")[-1].strip()
-            elif cmd.startswith("set port:"):
+            elif cmd.startswith("# set port:"):
                 self.chat.port = cmd.split(":")[-1].strip()
         try:
             success, answer = self.chat.chat(question)
@@ -519,6 +538,22 @@ class EditShell(object):
                 self.cache.insert(self.cursor_row + 1, "fail reason: %s" % answer.decode())
         except Exception as e:
             self.cache.insert(self.cursor_row + 1, str(e))
+            
+    def goto(self, line_num):
+        line_num -= 1
+        last_line_num = len(self.cache) - 1
+        if line_num < 0:
+            line_num = 0
+        if line_num > last_line_num:
+            line_num = last_line_num
+        self.cursor_col = 0
+        self.cursor_row = line_num
+        self.offset_col = 0
+        self.display_offset_row = line_num - self.cache_size + 1
+        if self.display_offset_row < 0:
+            self.display_offset_row = 0
+        if self.display_offset_row > len(self.cache) - self.cache_size:
+            self.display_offset_row = len(self.cache) - self.cache_size
 
     def cursor_move_up(self):
         self.cursor_row -= 1
@@ -539,8 +574,8 @@ class EditShell(object):
             self.cursor_col = len(self.cache[self.cursor_row]) - self.offset_col
             
     def page_up(self):
-        self.display_offset_row -= self.cache_size
-        self.cursor_row -= self.cache_size
+        self.display_offset_row -= self.cache_size // 4
+        self.cursor_row -= self.cache_size // 4
         if self.display_offset_row < 0:
             self.display_offset_row = 0
         if self.cursor_row < 0:
@@ -549,8 +584,8 @@ class EditShell(object):
             self.cursor_col = len(self.cache[self.cursor_row]) - self.offset_col
     
     def page_down(self):
-        self.display_offset_row += self.cache_size
-        self.cursor_row += self.cache_size
+        self.display_offset_row += self.cache_size // 4
+        self.cursor_row += self.cache_size // 4
         if self.cursor_row >= len(self.cache):
             self.cursor_row = len(self.cache) - 1
         if self.display_offset_row > len(self.cache) - self.cache_size:
