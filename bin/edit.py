@@ -13,24 +13,20 @@ from scheduler import Condition, Message
 from ollama import Chat
 from common import exists, path_join, isfile, isdir, ClipBoard
 from display import Colors as C
+from analyzer import tokenize
+from analyzer import TOKEN_KEYWORD, TOKEN_IDENT, TOKEN_NUMBER, TOKEN_STRING, TOKEN_COMMENT, TOKEN_OP, TOKEN_WS
 
 coroutine = True
 
 
 class EditShell(object):
-    PY_KEYWORDS = (
-        "False", "None", "True",
-        "and", "as", "assert", "async", "await", "break", "class", "continue",
-        "def", "del", "elif", "else", "except", "enumerate", "finally", "for", "from",
-        "global", "if", "import", "in", "is", "lambda", "nonlocal", "not",
-        "or", "pass", "raise", "range", "return", "try", "while", "with", "yield",
-        "=", "self",
-    )
-    RS = []
-    for i in range(len(PY_KEYWORDS) // 8 + 1):
-        kw_alternation = '|'.join(PY_KEYWORDS[i * 8: i * 8 + 8])
-        r = re.compile(r'(^|\s+)(' + kw_alternation + r')(\s+|[\s.:(]|$)')
-        RS.append(r)
+    TOKEN_COLORS = {
+        TOKEN_KEYWORD: C.red,
+        TOKEN_STRING: C.yellow,
+        TOKEN_OP: C.green,
+        TOKEN_COMMENT: C.blue,
+        TOKEN_NUMBER: C.cyan,
+    }
 
     def __init__(self, file_path, display_size = (40, 29), cache_size = 28, ram = False):
         self.display_width = display_size[0]
@@ -251,42 +247,22 @@ class EditShell(object):
     def exists_line(self, line_num):
         return line_num >= 0 and line_num < self.total_lines
     
-    def comment_line(self, line, start, end, row):
-        result = []
-        s = line.find("#")
-        if s >= 0:
-            comment = line[s:]
-            if s >= start:
-                result.append({"s": comment, "c": " ", "x": (s - start) * 8, "y": row * 11 + 1, "C": C.blue})
-            else:
-                comment = comment[start - s:]
-                result.append({"s": comment, "c": " ", "x": 0, "y": row * 11 + 1, "C": C.blue})
-        return result
-    
     def highlight_line(self, line, start, end, row):
         result = []
-        line = line.split("#")[0]
-        for r in EditShell.RS:
-            pos = 0
-            while True:
-                m = r.search(line, pos)
-                if not m:                     # no more keywords on this line
-                    break
-                key = line[m.start():m.end()]
-                key = key.rstrip(" :(.")
-                s = key.rfind(" ") + 1
-                key = key[s:]
-                ks = m.start() + s
-                ke = ks + len(key)
+        for token in tokenize(line):
+            if token[0] in EditShell.TOKEN_COLORS:
+                c = EditShell.TOKEN_COLORS[token[0]]
+                key = token[1]
+                ks = token[2]
+                ke = token[3]
                 if ks >= start and ke <= end:
-                    result.append({"s": key, "c": " ", "x": (ks - start) * 8, "y": row * 11 + 1, "C": C.red})
+                    result.append({"s": key, "c": " ", "x": (ks - start) * 8, "y": row * 11 + 1, "C": c})
                 elif ks < start and ke > start:
                     key = key[start - ks:]
-                    result.append({"s": key, "c": " ", "x": 0, "y": row * 11 + 1, "C": C.red})
+                    result.append({"s": key, "c": " ", "x": 0, "y": row * 11 + 1, "C": c})
                 elif ks < end and ke > end:
                     key = key[:-(ke - end)]
-                    result.append({"s": key, "c": " ", "x": (ks - start) * 8, "y": row * 11 + 1, "C": C.red})
-                pos = m.end()
+                    result.append({"s": key, "c": " ", "x": (ks - start) * 8, "y": row * 11 + 1, "C": c})
         return result
 
     def get_frame(self):
@@ -310,7 +286,6 @@ class EditShell(object):
             data["highlights"] = highlights
         
         if self.mode == "select":
-#             data["render"] = render
             clears = []
             for i in range(28):
                 clears.append([1, i * 11 + 9, 318, i * 11 + 9, C.black])
@@ -321,12 +296,10 @@ class EditShell(object):
             data["selects"] = selects
         elif self.previous_mode == "select":
             self.previous_mode = self.mode
-#             data["render"] = render
             clears = []
             for i in range(28):
                 clears.append([1, i * 11 + 9, 318, i * 11 + 9, C.black])
             data["clear_lines"] = clears
-                
         return data
 
     def get_loading_frame(self, p):
@@ -356,14 +329,8 @@ class EditShell(object):
                 frame.append(line[self.offset_col: self.offset_col + self.display_width])
                 if self.highlight:
                     highlights.extend(self.highlight_line(line, self.offset_col, self.offset_col + self.display_width, n))
-                    highlights.extend(self.comment_line(line, self.offset_col, self.offset_col + self.display_width, n))
             for i in range(self.cache_size - len(frame)):
                 frame.append("")
-#             frame.append("{progress: <25}{mode: >8}{status: >7}".format(
-#                 progress = "%s/%s/%s" % (self.cursor_col + self.offset_col, self.cursor_row + 1, len(self.cache)),
-#                 mode = "% 7s " % self.mode,
-#                 status = self.status)
-#             )
             self.frame_previous = True
             self.previous_offset_row = self.display_offset_row
             self.previous_offset_col = self.offset_col
