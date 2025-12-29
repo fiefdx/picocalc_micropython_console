@@ -171,8 +171,12 @@ class EditShell(object):
                 self.status = "changed"
                 self.exit_count = 0
                 self.append_edit_operation()
+                n = 1
+                if c == "\t":
+                    c = "    "
+                    n = 4
                 self.cache[self.cursor_row] = self.cache[self.cursor_row][:self.cursor_col + self.offset_col] + c + self.cache[self.cursor_row][self.cursor_col + self.offset_col:]
-                self.cursor_move_right()
+                self.cursor_move_right(n)
                 self.frame_force_update = True
         elif self.mode == "select":
             if c == "UP" or c == "SUP":
@@ -561,16 +565,16 @@ class EditShell(object):
         if self.cursor_row < self.display_offset_row:
             self.display_offset_row = self.cursor_row
         
-    def cursor_move_right(self):
-        self.cursor_col += 1
+    def cursor_move_right(self, n = 1):
+        self.cursor_col += n
         if len(self.cache[self.cursor_row]) >= self.cursor_col + self.offset_col:
             if self.cursor_col > self.display_width:
-                self.offset_col += 1
+                self.offset_col += n
 #                 self.cache_to_frame()
                 self.cursor_col = self.display_width
         else:
-            self.cursor_col -= 1
-            if len(self.cache) - 1 > self.cursor_row:
+            self.cursor_col -= n
+            if len(self.cache) - n > self.cursor_row:
                 self.cursor_row += 1
                 self.cursor_col = 0
                 self.offset_col = 0
