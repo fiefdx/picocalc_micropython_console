@@ -31,6 +31,8 @@ def main(*args, **kwargs):
                 monitor_msg = "CPU%s:%3d%% RAM:%3d%% BATTERY[%s]: %3d%%" % (shell.scheduler.cpu, int(100 - shell.scheduler.idle), int(100 - (ram_free * 100 / ram_total)), "C" if plugged_in else "D", level)
                 padding = " " * ((width - len(monitor_msg)) // 2)
                 frame.append(padding + monitor_msg)
+                if shell.scheduler.current is not None:
+                    frame.append("%03d %36s" % (shell.scheduler.current.id, shell.scheduler.current.name))
                 for i, t in enumerate(shell.scheduler.tasks):
                     frame.append("%03d %36s"  % (t.id, t.name))
                 for i in range(0, height - len(frame)):
