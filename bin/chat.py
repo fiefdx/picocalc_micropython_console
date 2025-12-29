@@ -13,7 +13,7 @@ coroutine = True
 
 
 class ChatShell(Shell):
-    def __init__(self, display_size = (19, 9), cache_size = (-1, 100), history_length = 100, host = "", port = 11434, model = "llama:3.2", stream = False, prompt_c = ">", scheduler = None, display_id = None, storage_id = None, history_file_path = "/.chat_history"):
+    def __init__(self, display_size = (19, 9), cache_size = (-1, 500), history_length = 100, host = "", port = 11434, model = "llama:3.2", stream = False, prompt_c = ">", scheduler = None, display_id = None, storage_id = None, history_file_path = "/.chat_history"):
         self.display_width = display_size[0]
         self.display_height = display_size[1]
         self.display_width_with_prompt = display_size[0] + len(prompt_c)
@@ -93,8 +93,8 @@ class ChatShell(Shell):
                             success, content = self.chat.chat(cmd)
                             if success:
                                 if self.chat_log:
-                                    self.chat_log.write(cmd + "\n")
-                                    self.chat_log.write(content + "\n\n")
+                                    self.chat_log.write("Q: " + cmd + "\n")
+                                    self.chat_log.write("A: " + content + "\n\n")
                                     self.chat_log.flush()
                                 self.write_lines(content + "\n", end = True)
                             else:
@@ -148,6 +148,22 @@ class ChatShell(Shell):
             self.cache.pop(0)
         self.current_row = len(self.cache) - 1
         self.current_col = len(self.cache[-1])
+        
+    def write_lines(self, lines, end = False):
+        lines = lines.split("\n")
+        for n, line in enumerate(lines):
+            line = line.replace("\r", "")
+            line = line.replace("\n", "")
+            if n == len(lines) - 1 and line == "":
+                continue
+            self.cache.append(line)
+            if len(self.cache) > self.cache_lines:
+                self.cache.pop(0)
+            self.current_row = len(self.cache) - 1
+            self.current_col = len(self.cache[-1])
+        if end:
+            self.write_char("\n")
+        self.cache_to_frame_history()
 
     def update_stats(self, d):
         self.stats = "[ C%3d%%|R%3d%%:%6.2fK|D %4dK|B[%s] %3d%%]" % (d[1], d[2], d[3] / 1024, d[6] / 1024, "C" if d[8] else "D", d[9])
