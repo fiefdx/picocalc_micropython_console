@@ -179,6 +179,11 @@ class EditShell(object):
                 self.mode = "goto"
                 self.goto_str = ""
                 self.frame_force_update = True
+            elif c == "Ctrl-/":
+                if self.comment_current_line():
+                    self.status = "changed"
+                    self.exit_count = 0
+                    self.frame_force_update = True
             elif c == "ES":
                 if self.status == "saved":
                     self.exit = True
@@ -554,6 +559,23 @@ class EditShell(object):
             self.display_offset_row = 0
         if self.display_offset_row > len(self.cache) - self.cache_size:
             self.display_offset_row = len(self.cache) - self.cache_size
+            
+    def comment_current_line(self):
+        result = False
+        line = self.cache[self.cursor_row]
+        if line != "":
+            for n, c in enumerate(line):
+                if c == " ":
+                    continue
+                if c == "#":
+                    self.cache[self.cursor_row] = self.cache[self.cursor_row][:n] + self.cache[self.cursor_row][n+2:]
+                    result = True
+                    break
+                else:
+                    self.cache[self.cursor_row] = self.cache[self.cursor_row][:n] + "# " + self.cache[self.cursor_row][n:]
+                    result = True
+                    break
+        return result
 
     def cursor_move_up(self):
         self.cursor_row -= 1
