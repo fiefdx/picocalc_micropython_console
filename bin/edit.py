@@ -77,10 +77,16 @@ class EditShell(object):
                 col = 0
                 if self.highlight:
                     tokens = tokenize(before_enter)
-                    if len(tokens) > 0:
+                    if len(tokens) > 1:
+                        if tokens[0][0] == TOKEN_WS and tokens[0][1].isspace():
+                            col += len(tokens[0][1])
+                        if tokens[-1][0] == TOKEN_OP and tokens[-1][1] in (":", "(", "[", "{"):
+                            col += 4
+                        after_enter = " " * col + after_enter
+                    elif len(tokens) > 0:
                         if tokens[0][0] == TOKEN_WS and tokens[0][1].isspace():
                             after_enter = tokens[0][1] + after_enter
-                            col = len(tokens[0][1])
+                            col += len(tokens[0][1])
                 self.cache[self.cursor_row] = before_enter
                 self.edit_last_line = self.cursor_row
                 self.cursor_row += 1
