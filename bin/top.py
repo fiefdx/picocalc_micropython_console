@@ -31,10 +31,17 @@ def main(*args, **kwargs):
                 monitor_msg = "CPU%s:%3d%% RAM:%3d%% BATTERY[%s]: %3d%%" % (shell.scheduler.cpu, int(100 - shell.scheduler.idle), int(100 - (ram_free * 100 / ram_total)), "C" if plugged_in else "D", level)
                 padding = " " * ((width - len(monitor_msg)) // 2)
                 frame.append(padding + monitor_msg)
+                frame.append("-" * 40)
+                frame.append("% 3s  % 6s %28s" % ("PID", " CPU%", "Name"))
+                tasks = []
+                tasks.append((0, shell.scheduler.cpu_usage, "system"))
                 if shell.scheduler.current is not None:
-                    frame.append("%03d %36s" % (shell.scheduler.current.id, shell.scheduler.current.name))
+                    tasks.append((shell.scheduler.current.id, shell.scheduler.current.cpu_usage, shell.scheduler.current.name))
                 for i, t in enumerate(shell.scheduler.tasks):
-                    frame.append("%03d %36s"  % (t.id, t.name))
+                    tasks.append((t.id, t.cpu_usage, t.name))
+                tasks.sort(key = lambda x: x[1], reverse = True)
+                for t in tasks:
+                    frame.append("%03d % 6.2f%% %28s"  % t)
                 for i in range(0, height - len(frame)):
                     frame.append("")
                 yield Condition.get().load(sleep = 1000, wait_msg = False, send_msgs = [
