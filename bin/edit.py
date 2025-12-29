@@ -74,6 +74,13 @@ class EditShell(object):
                 self.exit_count = 0
                 before_enter = self.cache[self.cursor_row][:self.cursor_col + self.offset_col]
                 after_enter = self.cache[self.cursor_row][self.cursor_col + self.offset_col:]
+                col = 0
+                if self.highlight:
+                    tokens = tokenize(before_enter)
+                    if len(tokens) > 0:
+                        if tokens[0][0] == TOKEN_WS and tokens[0][1].isspace():
+                            after_enter = tokens[0][1] + after_enter
+                            col = len(tokens[0][1])
                 self.cache[self.cursor_row] = before_enter
                 self.edit_last_line = self.cursor_row
                 self.cursor_row += 1
@@ -91,6 +98,8 @@ class EditShell(object):
                 self.offset_col = 0
                 op.append((self.cursor_col, self.cursor_row, self.display_offset_col, self.display_offset_row, self.offset_col))
                 self.edit_history.append(op)
+                if col > 0:
+                    self.cursor_move_right(col)
                 self.frame_force_update = True
             elif c == "\b":
                 self.status = "changed"
