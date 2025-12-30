@@ -5,10 +5,11 @@ import time
 import random
 from math import ceil, sqrt
 from io import StringIO
+from time import ticks_ms, ticks_diff
 
 from shell import Shell
 from scheduler import Condition, Message
-from common import exists, path_join, isfile, isdir, ticks_ms, ticks_diff, Resource
+from common import exists, path_join, isfile, isdir, Resource
 from display import Colors as C
 
 coroutine = True
