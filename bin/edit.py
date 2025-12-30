@@ -23,7 +23,7 @@ class EditShell(object):
     TOKEN_COLORS = {
         TOKEN_KEYWORD: C.red,
         TOKEN_STRING: C.yellow,
-        TOKEN_OP: C.green,
+        TOKEN_OP: C.magenta,
         TOKEN_COMMENT: C.blue,
         TOKEN_NUMBER: C.cyan,
     }
@@ -708,11 +708,11 @@ class EditShell(object):
         
     def cursor_move_right(self, n = 1):
         self.cursor_col += n
-        if len(self.cache[self.cursor_row]) >= self.cursor_col + self.offset_col:
-            if self.cursor_col > self.display_width:
+        if len(self.cache[self.cursor_row]) >= self.cursor_col + self.offset_col - 1:
+            if self.cursor_col >= self.display_width:
                 self.offset_col += n
 #                 self.cache_to_frame()
-                self.cursor_col = self.display_width
+                self.cursor_col = self.display_width - 1
         else:
             self.cursor_col -= n
             if len(self.cache) - n > self.cursor_row:
@@ -725,9 +725,15 @@ class EditShell(object):
     def page_left(self):
         if self.offset_col > 0:
             self.offset_col -= self.display_width // 4
-            self.cursor_col += self.display_width // 4
             if self.offset_col < 0:
                 self.offset_col = 0
+            if len(self.cache[self.cursor_row]) < self.offset_col:
+                self.cursor_col = len(self.cache[self.cursor_row]) - self.offset_col
+            else:
+                if len(self.cache[self.cursor_row]) < self.cursor_col + self.offset_col:
+                    self.cursor_col = len(self.cache[self.cursor_row]) - self.offset_col
+                if self.cursor_col < 0:
+                    self.cursor_col = 0
 #             self.cache_to_frame()
         elif self.offset_col == 0:
             self.cursor_col = 0
