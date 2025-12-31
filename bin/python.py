@@ -171,7 +171,7 @@ class PyShell(Shell):
         frame = self.cache_to_frame()[-self.display_height:]
         data["render"] = (("status", "texts"), )
         data["frame"] = frame
-        data["cursor"] = self.get_cursor_position(1)
+        data["cursor"] = self.get_cursor_position(c)
         data["status"] = [{"s": self.stats, "c": 40, "x": 0, "y": 310, "C": C.cyan}]
         if self.loading:
             # data["render"] = (("borders", "rects"),)
