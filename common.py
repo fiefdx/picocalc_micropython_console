@@ -1,6 +1,7 @@
 import os
 import uos
 import time
+from machine import RTC
 from micropython import const
 platform = "circuitpython"
 supervisor = None
@@ -9,6 +10,8 @@ try:
 except:
     platform = "micropython"
     print("micropython, no supervisor module exists, use time.ticks_ms instead")
+
+from ntp import get_ntp_time
 
 _TICKS_PERIOD = const(1<<29)
 _TICKS_MAX = const(_TICKS_PERIOD-1)
@@ -214,3 +217,22 @@ class ClipBoard(object):
     @classmethod
     def get_file(cls):
         return open(cls.path, "w")
+
+
+class Time(object):
+    days  = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+    rtc = RTC()
+    
+    @classmethod
+    def now(cls):
+        now = cls.rtc.datetime()
+        return "%04d-%02d-%02d %02d:%02d:%02d %s" % (now[0], now[1], now[2], now[4], now[5], now[6], cls.days[now[3]])
+    
+    @classmethod
+    def sync(cls):
+        try:
+            n = get_ntp_time()
+            cls.rtc.datetime((n[0], n[1], n[2], n[6], n[3], n[4], n[5], n[7]))
+        except:
+            return False
+        return True
