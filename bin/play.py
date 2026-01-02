@@ -38,58 +38,34 @@ def main(*args, **kwargs):
                     buf = bytearray(6)
                     Resource.keyboard.readinto(buf)
                     keys = bytes(buf)
-                    # duties = {}
-                    # for i in range(-32768, 1):
-                    #     duties[i] = i + 32768
                     frames_length = 1024 * channels * samplewidth
                     if channels == 2:
-                        while b"ES" not in keys:
+                        analyze_frames = 0
+                        analyze_loop = 10
+                        ts = ticks_cpu()
+                        while b"ES" not in keys and analyze_loop:
                             t = ticks_cpu()
                             frames = f.readframes(1024)
                             if not frames:
                                 break
-#                             frames_mv = memoryview(frames)
-#                             frames_array = array.array('<H', frames_mv)
-#                             for i in :
-#                                 s = i * bytes_per_frame
-#                                 e = (i + 1) * bytes_per_frame
-#                                 frame = frames[s:e]
-#                                 left_sample, right_sample = struct.unpack('<hh', frame)
-# #                                 left_pwm.duty_u16((left_sample ^ 0x8000) & 0xff)
-# #                                 right_pwm.duty_u16((right_sample ^ 0x8000) & 0xff)
-#                                 left_pwm.duty_u16(left_sample + 32768)
-#                                 right_pwm.duty_u16(right_sample + 32768)
-#                                 # left_pwm.duty_u16(duties[left_sample])
-#                                 # right_pwm.duty_u16(duties[right_sample])
-#                                 sleep_time = frame_interval - ticks_diff(ticks_cpu(), t)
-#                                 if sleep_time > 0:
-#                                     time.sleep_us(sleep_time)
-#                                 t = ticks_cpu()
                             frames_count = 1024
                             if len(frames) != frames_length:
                                 frames_count = int(len(frames) / channels / samplewidth)
-                            i = 0
-                            while i < frames_count:
+                            for i in range(frames_count):
                                 s = i * bytes_per_frame
-#                                 e = (i + 1) * bytes_per_frame
-#                                 frame = frames[s:e]
                                 left_sample, right_sample = struct.unpack_from('<hh', frames, s)
-#                                 left_pwm.duty_u16((left_sample ^ 0x8000) & 0xff)
-#                                 right_pwm.duty_u16((right_sample ^ 0x8000) & 0xff)
-                                left_pwm.duty_u16(left_sample + 32768)
-                                right_pwm.duty_u16(right_sample + 32768)
-                                # left_pwm.duty_u16(duties[left_sample])
-                                # right_pwm.duty_u16(duties[right_sample])
-                                sleep_time = frame_interval - ticks_diff(ticks_cpu(), t)
-                                if sleep_time > 0:
-                                    time.sleep_us(sleep_time)
-                                t = ticks_cpu()
-                                i += 1
+                                left_pwm.duty_u16(0)
+                                right_pwm.duty_u16(0)
                             buf = bytearray(6)
                             Resource.keyboard.readinto(buf)
                             keys = bytes(buf)
-                        result = "exit"
-                    elif channels == 1:
+                            analyze_loop -= 1
+                            analyze_frames += frames_count
+                        te = ticks_cpu()
+                        analyzed_interval = round((analyze_frames * (1000000 / framerate) - ticks_diff(te, ts)) / analyze_frames) + 8
+                        print(analyze_frames * (1000000 / framerate), ticks_diff(te, ts))
+                        print("analyzed_interval: ", analyzed_interval, (analyze_frames * (1000000 / framerate) - ticks_diff(te, ts)) / analyze_frames)
+                        f.setpos(0)
                         while b"ES" not in keys:
                             t = ticks_cpu()
                             frames = f.readframes(1024)
@@ -100,16 +76,55 @@ def main(*args, **kwargs):
                                 frames_count = int(len(frames) / channels / samplewidth)
                             for i in range(frames_count):
                                 s = i * bytes_per_frame
-#                                 e = (i + 1) * bytes_per_frame
-#                                 frame = frames[s:e]
+                                left_sample, right_sample = struct.unpack_from('<hh', frames, s)
+                                left_pwm.duty_u16(left_sample + 32768)
+                                right_pwm.duty_u16(right_sample + 32768)
+                                time.sleep_us(analyzed_interval)
+                            buf = bytearray(6)
+                            Resource.keyboard.readinto(buf)
+                            keys = bytes(buf)
+                        result = "exit"
+                    elif channels == 1:
+                        analyze_frames = 0
+                        analyze_loop = 10
+                        ts = ticks_cpu()
+                        while b"ES" not in keys and analyze_loop:
+                            frames = f.readframes(1024)
+                            if not frames:
+                                break
+                            frames_count = 1024
+                            if len(frames) != frames_length:
+                                frames_count = int(len(frames) / channels / samplewidth)
+                            for i in range(frames_count):
+                                s = i * bytes_per_frame
+                                left_sample, = struct.unpack_from('<h', frames, s)
+                                v = left_sample + 32768
+                                left_pwm.duty_u16(0)
+                                right_pwm.duty_u16(0)
+                            buf = bytearray(6)
+                            Resource.keyboard.readinto(buf)
+                            keys = bytes(buf)
+                            analyze_loop -= 1
+                            analyze_frames += frames_count
+                        te = ticks_cpu()
+                        analyzed_interval = round((analyze_frames * (1000000 / framerate) - ticks_diff(te, ts)) / analyze_frames) + 8
+                        print(analyze_frames * (1000000 / framerate), ticks_diff(te, ts))
+                        print("analyzed_interval: ", analyzed_interval, (analyze_frames * (1000000 / framerate) - ticks_diff(te, ts)) / analyze_frames)
+                        f.setpos(0)
+                        while b"ES" not in keys:
+                            frames = f.readframes(1024)
+                            if not frames:
+                                break
+                            frames_count = 1024
+                            if len(frames) != frames_length:
+                                frames_count = int(len(frames) / channels / samplewidth)
+                            for i in range(frames_count):
+                                s = i * bytes_per_frame
                                 left_sample, = struct.unpack_from('<h', frames, s)
                                 v = left_sample + 32768
                                 left_pwm.duty_u16(v)
                                 right_pwm.duty_u16(v)
-                                sleep_time = frame_interval - ticks_diff(ticks_cpu(), t)
-                                if sleep_time > 0:
-                                    time.sleep_us(sleep_time)
-                                t = ticks_cpu()
+                                time.sleep_us(analyzed_interval)
                             buf = bytearray(6)
                             Resource.keyboard.readinto(buf)
                             keys = bytes(buf)
