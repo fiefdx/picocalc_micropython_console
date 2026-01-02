@@ -134,6 +134,19 @@ class Explorer(object):
             self.editor = EditShell(file_path)
             self.shell.enable_cursor = True
             
+    def get_editor_init_frame(self):
+        frame = self.editor.get_using_ram_frame()
+        frame[0] = " " * 13 + "Editor Opening"
+        data = {
+            "render": (("clean_pointer", "rects"), ("border_lines", "lines"), ("borders", "rects")),
+            "frame": frame,
+            "cursor": self.editor.get_cursor_position(1),
+            "clean_pointer": [[1, self.previous_pointer_row * 11 + 10, 318, 12, C.black], [1, self.pointer_row * 11 + 10, 318, 12, C.black]],
+            "border_lines": [[239, 11, 239, 306, C.black], [248, 11, 248, 306, C.black]],
+            "borders": [[0, 0, 320, 11, C.white], [0, 0, 320, 319, C.white], [0, 307, 320, 12, C.white]],
+        }
+        return data
+            
     def get_editor_loading_frame(self, p):
         frame = self.editor.get_loading_frame(p)
         frame[0] = " " * 13 + "Editor Opening"
@@ -501,6 +514,16 @@ def main(*args, **kwargs):
                             Message.get().load(explorer.get_frame(), receiver = display_id)
                         ])
                     else:
+                        yield Condition.get().load(sleep = 0, wait_msg = True, send_msgs = [
+                            Message.get().load(explorer.get_editor_init_frame(), receiver = display_id)
+                        ])
+                        msg = task.get_message()
+                        c = msg.content["msg"]
+                        if c == "y" or c == "Y" or c == "\n":
+                            explorer.editor.set_ram(True)
+                        else:
+                            explorer.editor.set_ram(False)
+                        msg.release()
                         for p in explorer.editor.load_and_calc_total_lines():
                             yield Condition.get().load(sleep = 0, wait_msg = False, send_msgs = [
                                 Message.get().load(explorer.get_editor_loading_frame(p), receiver = display_id)
