@@ -65,6 +65,11 @@ class EditShell(object):
         self.previous_offset_row = 0
         self.previous_offset_col = 0
         
+    def set_ram(self, ram):
+        self.cache = [] if ram else ListFile("/.edit_cache.json", shrink_threshold = 1024000) # []
+        self.edit_history = [] if ram else ListFile("/.edit_history_cache.json", shrink_threshold = 1024000) # []
+        self.edit_redo_cache = [] if ram else ListFile("/.edit_redo_cache.json", shrink_threshold = 1024000)
+        
     def input_char(self, c):
         if self.mode == "edit":
             if len(self.cache) == 0:
@@ -346,6 +351,12 @@ class EditShell(object):
                 clears.append([1, i * 11 + 9, 318, i * 11 + 9, C.black])
             data["clear_lines"] = clears
         return data
+    
+    def get_using_ram_frame(self):
+        msg = "         Use RAM or not? [y/n]"
+        self.cursor_col = len(msg)
+        self.cursor_row = 2
+        return ["", "", msg, "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]
 
     def get_loading_frame(self, p):
         msg = "loading: %s%%" % p
@@ -725,6 +736,7 @@ class EditShell(object):
     def page_left(self):
         if self.offset_col > 0:
             self.offset_col -= self.display_width // 4
+            # self.cursor_col += self.display_width // 4
             if self.offset_col < 0:
                 self.offset_col = 0
             if len(self.cache[self.cursor_row]) < self.offset_col:
@@ -829,6 +841,16 @@ def main(*args, **kwargs):
                 ram = int(kwargs["args"][1]) == 1
             s = EditShell(file_path, ram = ram)
             shell.current_shell = s
+            yield Condition.get().load(sleep = 0, wait_msg = True, send_msgs = [
+                Message.get().load({"frame": s.get_using_ram_frame(), "cursor": s.get_cursor_position(1)}, receiver = display_id)
+            ])
+            msg = task.get_message()
+            c = msg.content["msg"]
+            msg.release()
+            if c == "y" or c == "Y" or c == "\n":
+                s.set_ram(True)
+            else:
+                s.set_ram(False)
             for p in s.load_and_calc_total_lines():
                 yield Condition.get().load(sleep = 0, wait_msg = False, send_msgs = [
                     Message.get().load({"frame": s.get_loading_frame(p), "cursor": s.get_cursor_position(1)}, receiver = display_id)
