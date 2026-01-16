@@ -14,6 +14,15 @@ class Chat(object):
         self.context_length = context_length
         self.context = []
         self.headers = {"Content-Type": "application/json"}
+        
+    def models(self):
+        url = "http://%s:%s/api/tags" % (self.host, self.port)
+        r = requests.get(url)
+        if r.status_code == 200:
+            response = r.json()
+            return True, response["models"]
+        else:
+            return False, r.reason
 
     def chat(self, message):
         url = "http://%s:%s/api/chat" % (self.host, self.port)
