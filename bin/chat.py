@@ -89,6 +89,17 @@ class ChatShell(Shell):
                     elif cmd.startswith("set port:"):
                         self.chat.port = cmd.split(":")[-1].strip()
                         self.write_lines("port: %s" % self.chat.port, end = True)
+                    elif cmd == "models":
+                        success, models = self.chat.models()
+                        if success:
+                            lines = ""
+                            for m in models:
+                                lines += m["name"] + "\n"
+                            if lines.endswith("\n"):
+                                lines = lines[:-1]
+                        else:
+                            lines = models
+                        self.write_lines(lines, end = True)
                     else:
                         try:
                             success, content = self.chat.chat(cmd)
@@ -174,7 +185,7 @@ class ChatShell(Shell):
         frame = self.cache_to_frame()[-self.display_height:]
         data["render"] = (("status", "texts"), )
         data["frame"] = frame
-        data["cursor"] = self.get_cursor_position(1)
+        data["cursor"] = self.get_cursor_position(c)
         data["status"] = [{"s": self.stats, "c": 40, "x": 0, "y": 310, "C": C.cyan}]
         if self.loading:
             # data["render"] = (("borders", "rects"),)
