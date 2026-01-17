@@ -505,7 +505,8 @@ def keyboard_input(task, name, scheduler = None, interval = 50, display_id = Non
                                     key = code.decode()
                                 # print("key2: ", key)
                                 if key == 'F1': # F1
-                                    yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
+                                    if enable_sound:
+                                        yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
                                     yield Condition.get().load(sleep = 0, send_msgs = [
                                         Message.get().load({"clear": True}, receiver = display_id)
                                     ])
@@ -514,7 +515,8 @@ def keyboard_input(task, name, scheduler = None, interval = 50, display_id = Non
                                     scheduler.set_log_to(scheduler.current_shell_id)
                                     yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"refresh": True}, receiver = scheduler.current_shell_id)])
                                 elif key == 'F2': # F2
-                                    yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
+                                    if enable_sound:
+                                        yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
                                     yield Condition.get().load(sleep = 0, send_msgs = [
                                         Message.get().load({"clear": True}, receiver = display_id)
                                     ])
