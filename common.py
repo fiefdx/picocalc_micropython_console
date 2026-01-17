@@ -56,6 +56,15 @@ def exists(path):
     return r
 
 
+def abs_path(path):
+    if path.startswith("/"):
+        return path
+    cwd = uos.getcwd()
+    if cwd == "/":
+        return "/" + path
+    return cwd + "/" + path
+
+
 def path_join(*args):
     path = args[0]
     for p in args[1:]:
