@@ -341,21 +341,26 @@ class Shell(object):
         #if "/sd/usr" not in sys.path:
         #    sys.path.insert(0, "/sd/usr")
         #import bin
-        if module not in sys.modules:
-            #import_str = "from bin import %s" % module
-            import_str = "import %s; sys.modules['%s'] = %s" % (module, module, module)
-            exec(import_str)
-        if sys.modules[module].coroutine:
-            #bin.__dict__[]
-            #self.session_task_id = self.scheduler.add_task(Task(bin.__dict__[module].main, cmd, kwargs = {"args": args[1:], "shell_id": self.scheduler.shell_id, "shell": self}, need_to_clean = [bin.__dict__[module]])) # execute cmd
-            self.session_task_id = self.scheduler.add_task(
-                Task.get().load(sys.modules[module].main, cmd, condition = Condition.get(), kwargs = {"args": args[1:],
-                                                                                           "shell_id": self.scheduler.shell_id,
-                                                                                           "shell": self}, need_to_clean = [sys.modules[module]])
-            ) # execute cmd
-        else:
-            yield Condition.get().load(sleep = 0, send_msgs = [
-                Message.get().load({"cmd": cmd}, receiver = self.storage_id)
+        try:
+            if module not in sys.modules:
+                #import_str = "from bin import %s" % module
+                import_str = "import %s; sys.modules['%s'] = %s" % (module, module, module)
+                exec(import_str)
+            if sys.modules[module].coroutine:
+                #bin.__dict__[]
+                #self.session_task_id = self.scheduler.add_task(Task(bin.__dict__[module].main, cmd, kwargs = {"args": args[1:], "shell_id": self.scheduler.shell_id, "shell": self}, need_to_clean = [bin.__dict__[module]])) # execute cmd
+                self.session_task_id = self.scheduler.add_task(
+                    Task.get().load(sys.modules[module].main, cmd, condition = Condition.get(), kwargs = {"args": args[1:],
+                                                                                               "shell_id": self.scheduler.current_shell_id,
+                                                                                               "shell": self}, need_to_clean = [sys.modules[module]])
+                ) # execute cmd
+            else:
+                yield Condition.get().load(sleep = 0, send_msgs = [
+                    Message.get().load({"cmd": cmd}, receiver = self.storage_id)
+                ])
+        except Exception as e:
+            yield Condition.get().load(sleep = 0, wait_msg = False, send_msgs = [
+                Message.get().load({"output": "error: %s" % e}, receiver = self.scheduler.current_shell_id)
             ])
 
     def run_script_coroutine(self, task, cmd):
@@ -364,24 +369,29 @@ class Shell(object):
         if exists(script_path) and isfile(script_path):
             module_path, script_name = path_split(script_path)
             module = script_name.split(".")[0]
-            sys.path.insert(0, module_path)
-            if module not in sys.modules:
-                import_str = "import %s; sys.modules['%s'] = %s" % (module, module, module)
-                exec(import_str)
-            if sys.modules[module].coroutine:
-                self.session_task_id = self.scheduler.add_task(
-                    Task.get().load(sys.modules[module].main, cmd, condition = Condition.get(), kwargs = {"args": args[1:],
-                                                                                               "shell_id": self.scheduler.shell_id,
-                                                                                               "shell": self}, need_to_clean = [sys.modules[module]], reset_sys_path = True)
-                ) # execute cmd
-            else:
-                sys.path.pop(0)
+            try:
+                sys.path.insert(0, module_path)
+                if module not in sys.modules:
+                    import_str = "import %s; sys.modules['%s'] = %s" % (module, module, module)
+                    exec(import_str)
+                if sys.modules[module].coroutine:
+                    self.session_task_id = self.scheduler.add_task(
+                        Task.get().load(sys.modules[module].main, cmd, condition = Condition.get(), kwargs = {"args": args[1:],
+                                                                                                   "shell_id": self.scheduler.current_shell_id,
+                                                                                                   "shell": self}, need_to_clean = [sys.modules[module]], reset_sys_path = True)
+                    ) # execute cmd
+                else:
+                    sys.path.pop(0)
+                    yield Condition.get().load(sleep = 0, wait_msg = False, send_msgs = [
+                        Message.get().load({"output": "it's not a coroutine script!"}, receiver = self.scheduler.current_shell_id)
+                    ])
+            except Exception as e:
                 yield Condition.get().load(sleep = 0, wait_msg = False, send_msgs = [
-                    Message.get().load({"output": "it's not a coroutine script!"}, receiver = self.scheduler.shell_id)
+                    Message.get().load({"output": "error: %s" % e}, receiver = self.scheduler.current_shell_id)
                 ])
         else:
             yield Condition.get().load(sleep = 0, wait_msg = False, send_msgs = [
-                Message.get().load({"output": "script path not exists!"}, receiver = self.scheduler.shell_id)
+                Message.get().load({"output": "script path not exists!"}, receiver = self.scheduler.current_shell_id)
             ])
     
     def cursor_move_left(self):
