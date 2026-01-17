@@ -5,7 +5,7 @@ from micropython import const
 
 # from listfile import ListFile
 from scheduler import Condition, Task, Message
-from common import exists, path_join, isfile, isdir
+from common import exists, path_join, isfile, isdir, path_split
 from display import Colors as C
 
 
@@ -236,13 +236,19 @@ class Shell(object):
                 if c == "\n":
                     cmd = self.cache[-1][len(self.prompt_c):].strip()
                     if len(cmd) > 0:
-                        if self.session_task_id is not None and self.scheduler.exists_task(self.session_task_id):
-                            self.scheduler.add_task(Task.get().load(self.send_session_message, self.cache[-1].strip(), condition = Condition.get(), kwargs = {})) # execute cmd
-                        else:
+                        if cmd.startswith("run "):
                             self.history.append(self.cache[-1][len(self.prompt_c):])
                             self.write_history(self.cache[-1][len(self.prompt_c):])
-                            command = cmd.split(" ")[0].strip()
-                            self.scheduler.add_task(Task.get().load(self.run_coroutine, cmd, condition = Condition.get(), kwargs = {})) # execute cmd
+                            cmd = " ".join(cmd.split(" ")[1:]).strip()
+                            self.scheduler.add_task(Task.get().load(self.run_script_coroutine, cmd, condition = Condition.get(), kwargs = {})) # execute cmd
+                        else:
+                            if self.session_task_id is not None and self.scheduler.exists_task(self.session_task_id):
+                                self.scheduler.add_task(Task.get().load(self.send_session_message, self.cache[-1].strip(), condition = Condition.get(), kwargs = {})) # execute cmd
+                            else:
+                                self.history.append(self.cache[-1][len(self.prompt_c):])
+                                self.write_history(self.cache[-1][len(self.prompt_c):])
+                                command = cmd.split(" ")[0].strip()
+                                self.scheduler.add_task(Task.get().load(self.run_coroutine, cmd, condition = Condition.get(), kwargs = {})) # execute cmd
                     else:
                         self.cache.append(self.prompt_c)
                         self.cache_to_frame_history()
@@ -350,6 +356,32 @@ class Shell(object):
         else:
             yield Condition.get().load(sleep = 0, send_msgs = [
                 Message.get().load({"cmd": cmd}, receiver = self.storage_id)
+            ])
+
+    def run_script_coroutine(self, task, cmd):
+        args = cmd.split(" ")
+        script_path = args[0]
+        if exists(script_path) and isfile(script_path):
+            module_path, script_name = path_split(script_path)
+            module = script_name.split(".")[0]
+            sys.path.insert(0, module_path)
+            if module not in sys.modules:
+                import_str = "import %s; sys.modules['%s'] = %s" % (module, module, module)
+                exec(import_str)
+            if sys.modules[module].coroutine:
+                self.session_task_id = self.scheduler.add_task(
+                    Task.get().load(sys.modules[module].main, cmd, condition = Condition.get(), kwargs = {"args": args[1:],
+                                                                                               "shell_id": self.scheduler.shell_id,
+                                                                                               "shell": self}, need_to_clean = [sys.modules[module]], reset_sys_path = True)
+                ) # execute cmd
+            else:
+                sys.path.pop(0)
+                yield Condition.get().load(sleep = 0, wait_msg = False, send_msgs = [
+                    Message.get().load({"output": "it's not a coroutine script!"}, receiver = self.scheduler.shell_id)
+                ])
+        else:
+            yield Condition.get().load(sleep = 0, wait_msg = False, send_msgs = [
+                Message.get().load({"output": "script path not exists!"}, receiver = self.scheduler.shell_id)
             ])
     
     def cursor_move_left(self):
