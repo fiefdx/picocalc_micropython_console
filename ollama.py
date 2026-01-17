@@ -19,8 +19,10 @@ class Chat(object):
         url = "http://%s:%s/api/tags" % (self.host, self.port)
         r = requests.get(url)
         if r.status_code == 200:
-            response = r.json()
-            return True, response["models"]
+            models = []
+            for m in r.json()["models"]:
+                models.append({"name": m["name"]})
+            return True, models
         else:
             return False, r.reason
 
