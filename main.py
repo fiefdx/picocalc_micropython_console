@@ -454,6 +454,7 @@ def keyboard_input(task, name, scheduler = None, interval = 50, display_id = Non
         b'\x02': "Ctrl-B",
         b'\x03': "Ctrl-C",
         b'\x07': "Ctrl-G",
+        b'\r': "Ctrl-M",
         b'\x11': "Ctrl-Q",
         b'\x14': "Ctrl-T",
         b'\x16': "Ctrl-V",
@@ -470,6 +471,7 @@ def keyboard_input(task, name, scheduler = None, interval = 50, display_id = Non
     Resource.keyboard = k
     yield Condition.get().load(sleep = 1000)
     key_sound = const(2000)
+    enable_sound = False
     keys = bytearray(30)
     while True:
         try:
@@ -520,12 +522,20 @@ def keyboard_input(task, name, scheduler = None, interval = 50, display_id = Non
                                     scheduler.current_shell_id = scheduler.shells[1][0]
                                     scheduler.set_log_to(scheduler.current_shell_id)
                                     yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"refresh": True}, receiver = scheduler.current_shell_id)])
-                                else:
-                                    if scheduler.shell and scheduler.shell.session_task_id and scheduler.exists_task(scheduler.shell.session_task_id):
-                                        yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
-                                        yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"msg": key, "keys": [key]}, receiver = scheduler.shell.session_task_id)])
+                                elif key == "Ctrl-M":
+                                    if enable_sound:
+                                        enable_sound = False
                                     else:
                                         yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
+                                        enable_sound = True
+                                else:
+                                    if scheduler.shell and scheduler.shell.session_task_id and scheduler.exists_task(scheduler.shell.session_task_id):
+                                        if enable_sound:
+                                            yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
+                                        yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"msg": key, "keys": [key]}, receiver = scheduler.shell.session_task_id)])
+                                    else:
+                                        if enable_sound:
+                                            yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
                                         yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"char": key}, receiver = scheduler.current_shell_id)])
                             except:
                                 pass
