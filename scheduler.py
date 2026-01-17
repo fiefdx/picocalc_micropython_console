@@ -122,10 +122,10 @@ class Task(object):
         cls.id_count += 1
         return cls.id_count
     
-    def __init__(self, func, name, condition = None, task_id = None, args = [], kwargs = {}, need_to_clean = [], processed = False):
-        self.load(func, name, condition, task_id, args, kwargs, need_to_clean, processed)
+    def __init__(self, func, name, condition = None, task_id = None, args = [], kwargs = {}, need_to_clean = [], reset_sys_path = False, processed = False):
+        self.load(func, name, condition, task_id, args, kwargs, need_to_clean, reset_sys_path, processed)
 
-    def load(self, func, name, condition = Condition(), task_id = None, args = [], kwargs = {}, need_to_clean = [], processed = False):
+    def load(self, func, name, condition = Condition(), task_id = None, args = [], kwargs = {}, need_to_clean = [], reset_sys_path = False, processed = False):
         self.id = Task.new_id()
         if task_id:
             self.id = task_id
@@ -135,6 +135,7 @@ class Task(object):
         self.func = func(self, name, *args, **kwargs) if func else None
         self.condition = condition
         self.need_to_clean = need_to_clean
+        self.reset_sys_path = reset_sys_path
         self.processed = processed
         self.cpu_time_ms = 0
         self.cpu_usage = 0
@@ -183,6 +184,7 @@ class Task(object):
         if self.condition:
             self.condition.release()
         del self.need_to_clean
+        self.reset_sys_path = False
         self.processed = True
 
 
@@ -312,6 +314,12 @@ class Scheluder(object):
                                             del m.main
                                         del sys.modules[m_name]
                                         gc.collect()
+                                    except Exception as e:
+                                        h = "task: %s\n" % self.current.name
+                                        self.log(h, e)
+                                if self.current.reset_sys_path:
+                                    try:
+                                        sys.path.pop(0)
                                     except Exception as e:
                                         h = "task: %s\n" % self.current.name
                                         self.log(h, e)
