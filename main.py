@@ -2,6 +2,7 @@ import os
 import sys
 import gc
 import time
+from time import ticks_ms, ticks_add, ticks_diff, sleep_ms
 import uos
 import framebuf
 import socket
@@ -27,7 +28,7 @@ import sdcard
 # import font7
 from display import ILI9488, Colors as C
 from scheduler import Scheluder, Condition, Task, Message
-from common import ticks_ms, ticks_add, ticks_diff, sleep_ms, Resource
+from common import Resource
 from shell import Shell
 from keyboard import Keyboard
 # from writer_fast import CWriter
@@ -283,6 +284,7 @@ def storage(task, name, scheduler = None):
     spi = SPI(0, baudrate=13200000, sck=Pin(18), mosi=Pin(19), miso=Pin(16))
     sd = None
     vfs = None
+    sd_cs = Pin(17)
     try:
         sd = sdcard.SDCard(spi, Pin(17), baudrate=13200000)
         vfs = uos.VfsFat(sd)
@@ -351,7 +353,7 @@ def cursor(task, name, interval = 500, s = None, display_id = None, storage_id =
 def shell(task, name, scheduler = None, display_id = None, storage_id = None):
     yield Condition.get().load(sleep = 1000)
     width, height = 39, 28 # 52, 29 for 6x8 font
-    s = Shell(display_size = (width, height), cache_size = (-1, 50), history_length = 50, scheduler = scheduler, storage_id = storage_id, display_id = display_id)
+    s = Shell(display_size = (width, height), cache_size = (-1, 200), history_length = 100, scheduler = scheduler, storage_id = storage_id, display_id = display_id)
     s.write_line("           Welcome to TinyShell")
     s.write_char("\n")
 #     s.write_line("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890`-=~!@#$%^&*()_+[]\\{}|;':\",./<>?")
@@ -417,19 +419,19 @@ def keyboard_input(task, name, scheduler = None, interval = 50, shell_id = None,
     key_map_ignore = {
         b'\x81': "F1",
         b'\x82': "F2",
-        b'\x83': "F3",
+#         b'\x83': "F3",
 #         b'\x84': "F4",
 #         b'\x85': "F5",
         b'\x86': "F6",
         b'\x87': "F7",
         b'\x88': "F8",
-#         b'\x89': "F9",
-#         b'\x90': "F10",
+        b'\x89': "F9",
+        b'\x90': "F10",
         b'\xc1': "CAP",
         b'\x1b[F': "END",
         b'\x1b[H': "HOME",
         b'\xd0': "BREAK",
-        b'\x1b[3~': "DEL",
+#         b'\x1b[3~': "DEL",
         b'\x1b\xd1': "INS",
     }
     key_map = {
@@ -438,13 +440,16 @@ def keyboard_input(task, name, scheduler = None, interval = 50, shell_id = None,
         b'\x02': "Ctrl-B",
         b'\x03': "Ctrl-C",
         b'\x07': "Ctrl-G",
+        b'\x11': "Ctrl-Q",
+        b'\x14': "Ctrl-T",
         b'\x16': "Ctrl-V",
         b'\x18': "Ctrl-X",
         b'\x1a': "Ctrl-Z",
-        b'\x84': "BY",
+        b'\x0f': "Ctrl-/",
+        b'\x83': "BY",
         b'\x85': "BA",
-        b'\x89': "BX",
-        b'\x90': "BB",
+        b'\x84': "BX",
+        b'\x1b[3~': "BB",
     }
     Resource.keyboard = k
     yield Condition.get().load(sleep = 1000)
@@ -460,7 +465,7 @@ def keyboard_input(task, name, scheduler = None, interval = 50, shell_id = None,
                 if n is not None:
                     # print("size: ", n)
                     # print("keys: ", keys[:n])
-                    if n == 1 or n == 2:
+                    if n == 1 or n == 2 or n == 3 or n == 4:
                         code = bytes(keys[:n])
                         # print("code: ", code, code in key_map)
                         if code not in key_map_ignore:
@@ -537,8 +542,8 @@ if __name__ == "__main__":
         s.sound_id = sound_id
         shell_id = s.add_task(Task.get().load(shell, "shell", condition = Condition.get(), kwargs = {"scheduler": s, "display_id": display_id, "storage_id": storage_id}))
         s.shell_id = shell_id
-#         s.set_log_to(shell_id)
-        keyboard_id = s.add_task(Task.get().load(keyboard_input, "keyboard_input", condition = Condition.get(), kwargs = {"scheduler": s, "interval": 20, "shell_id": shell_id, "display_id": display_id}))
+        s.set_log_to(shell_id)
+        keyboard_id = s.add_task(Task.get().load(keyboard_input, "keyboard_input", condition = Condition.get(), kwargs = {"scheduler": s, "interval": 50, "shell_id": shell_id, "display_id": display_id}))
         led.on()
         # led.off()
         s.run()
