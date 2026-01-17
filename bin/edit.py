@@ -71,6 +71,8 @@ class EditShell(object):
         self.edit_redo_cache = [] if ram else ListFile("/.edit_redo_cache.json", shrink_threshold = 1024000)
         
     def input_char(self, c):
+        if c == "refresh":
+            self.frame_force_update = True
         if self.mode == "edit":
             if len(self.cache) == 0:
                 self.cache.append("")

@@ -513,7 +513,7 @@ def main(*args, **kwargs):
                         yield Condition.get().load(sleep = 0, wait_msg = True, send_msgs = [
                             Message.get().load(explorer.get_frame(), receiver = display_id)
                         ])
-                    else:
+                    else: # loading
                         yield Condition.get().load(sleep = 0, wait_msg = True, send_msgs = [
                             Message.get().load(explorer.get_editor_init_frame(), receiver = display_id)
                         ])
