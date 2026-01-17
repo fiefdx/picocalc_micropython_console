@@ -726,7 +726,9 @@ def main(*args, **kwargs):
                 msg = task.get_message()
                 if msg:
                     c = msg.content["msg"]
-                    keys = msg.content["keys"]
+                    keys.clear()
+                    if "keys" in msg.content:
+                        keys = msg.content["keys"]
                     msg.release()
                 else:
                     c = None
