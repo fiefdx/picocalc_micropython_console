@@ -5,7 +5,7 @@ from micropython import const
 
 # from listfile import ListFile
 from scheduler import Condition, Task, Message
-from common import exists, path_join, isfile, isdir, path_split
+from common import exists, path_join, isfile, isdir, path_split, abs_path
 from display import Colors as C
 
 
@@ -360,7 +360,7 @@ class Shell(object):
 
     def run_script_coroutine(self, task, cmd):
         args = cmd.split(" ")
-        script_path = args[0]
+        script_path = abs_path(args[0])
         if exists(script_path) and isfile(script_path):
             module_path, script_name = path_split(script_path)
             module = script_name.split(".")[0]
