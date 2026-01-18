@@ -1,4 +1,4 @@
-import os
+import uos
 import sys
 import time
 from math import ceil
@@ -7,7 +7,7 @@ from io import StringIO
 from shell import Shell
 from scheduler import Condition, Message
 from ollama import Chat
-from common import exists, path_join, isfile, isdir, mkdirs, path_split
+from common import exists, path_join, isfile, isdir, mkdirs, path_split, Resource
 from display import Colors as C
 
 coroutine = True
@@ -50,6 +50,41 @@ class ChatShell(Shell):
     # def clear(self):
     #     self.term = StringIO()
     #     os.dupterm(self.term)
+    
+    def load_history(self):
+        if exists(self.history_file_path):
+            history_file = open(self.history_file_path, "r")
+            history_lines = 0
+            line = history_file.readline()
+            while line:
+                line = line.strip()
+                self.history.append(line)
+                if len(self.history) > self.history_length:
+                    self.history.pop(0)
+                history_lines += 1
+                line = history_file.readline()
+            history_file.close()
+            if history_lines > self.history_length:
+                tmp_file_path = self.history_file_path + ".tmp"
+                if exists(tmp_file_path):
+                    uos.remove(tmp_file_path)
+                uos.rename(self.history_file_path, tmp_file_path)
+                tmp_file = open(tmp_file_path, "r")
+                history_file = open(self.history_file_path, "w")
+                l = 0
+                line = tmp_file.readline()
+                while line:
+                    l += 1
+                    if l > (history_lines - self.history_length):
+                        history_file.write(line)
+                    line = tmp_file.readline()
+                tmp_file.close()
+                history_file.close()
+                uos.remove(tmp_file_path)
+        if not hasattr(Resource, "chat_history_file"):
+            Resource.chat_history_file = open(self.history_file_path, "a")
+        self.history_file = Resource.chat_history_file
+        self.history_idx = len(self.history)
         
     def input_char(self, c):
         try:
