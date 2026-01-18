@@ -1,0 +1,44 @@
+import sys
+import uos
+
+from scheduler import Condition, Message
+from common import exists, path_join, isfile, isdir, path_split, mkdirs, copy, copyfile, copydir
+from tea import CryptFile
+
+coroutine = True
+
+
+def main(*args, **kwargs):
+    result = "invalid parameters"
+    task = args[0]
+    name = args[1]
+    args = kwargs["args"]
+    shell_id = kwargs["shell_id"]
+    try:
+        if len(args) == 2:
+            password = args[0]
+            file_path = args[1]
+            if exists(file_path) and isfile(file_path):
+                f = CryptFile(file_path)
+                success = f.open_source_file()
+                if success is True:
+                    for m in f.encrypt(key = password):
+                        yield Condition.get().load(sleep = 0, send_msgs = [
+                            Message.get().load({"output_part": m}, receiver = shell_id)
+                        ])
+                else:
+                    yield Condition.get().load(sleep = 0, send_msgs = [
+                        Message.get().load({"output_part": success}, receiver = shell_id)
+                    ])
+            yield Condition.get().load(sleep = 0, send_msgs = [
+                Message.get().load({"output": ""}, receiver = shell_id)
+            ])
+        else:
+            yield Condition.get().load(sleep = 0, send_msgs = [
+                Message.get().load({"output": result}, receiver = shell_id)
+            ])
+    except Exception as e:
+        yield Condition.get().load(sleep = 0, send_msgs = [
+            Message.get().load({"output": str(sys.print_exception(e))}, receiver = shell_id)
+        ])
+
