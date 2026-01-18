@@ -8,9 +8,7 @@ from random import seed
 from random import randint
 import hashlib
 
-# import adafruit_hashlib as hashlib
-
-from common import exists, path_join, ticks_ms, ticks_add, ticks_diff, sleep_ms
+from common import exists, path_join, isfile, isdir, ticks_ms, ticks_add, ticks_diff, sleep_ms
 
 
 CRYPT_BLOCK = 1024 * 8
@@ -22,15 +20,13 @@ OP_64 = 0xffffffffffffffff
 def sha1sum(content):
     #'''param content must be unicode, result is string'''
     m = hashlib.sha1(content.encode("utf-8"))
-    m.digest()
-    result = m.hexdigest()
-    return result
+    return m.digest().hex()
 
 
 def md5twice(content):
     #'''param content must be unicode, result is string'''
-    m = hashlib.md5(content.encode("utf-8")).hexdigest()
-    result = hashlib.md5(m).hexdigest()
+    m = hashlib.md5(content.encode("utf-8")).digest().hex()
+    result = hashlib.md5(m).digest().hex()
     return result
 
 
@@ -188,17 +184,20 @@ class CryptFile(object):
         self.start_time = 0
 
     def open_source_file(self):
-        if exists(self.file_path):
+        result = "[%s] is not a file!" % self.file_path
+        if exists(self.file_path) and isfile(self.file_path):
             fp = open(self.file_path, "rb")
             fp.seek(0, 2)
             self.file_size = fp.tell()
             fp.seek(0, 0)
             self.fp = fp
-            print("size: ", self.file_size)
-        else:
-            error = {"type" : "warning", "info" : "File [%s] dosen't exists!" % self.file_path}
-            self.call_back(0, error = error)
-            print("file path[%s] is not a file!" % self.file_path)
+            result = True
+#             print("size: ", self.file_size)
+#         else:
+#             error = {"type" : "warning", "info" : "File [%s] dosen't exists!" % self.file_path}
+#             self.call_back(0, error = error)
+#             print("file path[%s] is not a file!" % self.file_path)
+        return result
             
     def encrypt(self, key = ""):
         fname_hash = sha1sum(self.file_name)
@@ -208,18 +207,19 @@ class CryptFile(object):
         crypt_key = ""
         if key != "":
             crypt_key = md5twice(key)
-            print("crypt_key: %s" % crypt_key)
+#             print("crypt_key: %s" % crypt_key)
         if not exists(self.crypt_file_path):
             crypt_fp = open(self.crypt_file_path, "wb")
-            print("Create crypt file path[%s]" % self.crypt_file_path)
+            yield "Output [%s]" % self.crypt_file_path
         else:
-            error = {"type" : "warning", "info" : "File [%s] already exists!" % self.crypt_file_path}
-            self.call_back(0, error = error)
-            print("Crypt file path[%s] exists!" % self.crypt_file_path)
+#             error = {"type" : "warning", "info" : "File [%s] already exists!" % self.crypt_file_path}
+#             self.call_back(0, error = error)
+            yield "File [%s] exists!" % self.crypt_file_path
         if crypt_fp != None and self.fp != None:
             if crypt_key != "":
-                if self.call_back:
-                    self.call_back(0)
+#                 if self.call_back:
+#                     self.call_back(0)
+                yield "0%"
                 header_fname = str_encrypt(self.file_name, crypt_key)
                 self.fname_pos = 25
                 self.fname_len = len(header_fname)
@@ -242,23 +242,25 @@ class CryptFile(object):
                     self.file_len += len(crypt_buf)
                     crypt_fp.write(crypt_buf)
                     crypt_size += CRYPT_BLOCK
-                    if self.call_back and crypt_size < self.file_size and ticks_diff(ticks_ms(), self.start_time) >= self.delay:
+                    if crypt_size < self.file_size and ticks_diff(ticks_ms(), self.start_time) >= self.delay:
                         percent = crypt_size * 100 / self.file_size
                         if percent > self.percent:
                             self.percent = percent
                             self.start_time = ticks_ms()
-                            self.call_back(self.percent)
+#                             self.call_back(self.percent)
+                            yield "%s%%" % self.percent
                 crypt_fp.seek(17, 0)
                 crypt_fp.write(struct.pack(">Q", self.file_len))
-                print("file pos: %s, file len: %s" % (self.file_pos, self.file_len))
+#                 print("file pos: %s, file len: %s" % (self.file_pos, self.file_len))
                 # crypt_fp.seek(0, 2)
-                if self.call_back:
-                    self.call_back(100)
+#                 if self.call_back:
+#                     self.call_back(100)
+                yield "100%"
                 crypt_fp.close()
             else:
-                error = {"type" : "warning", "info" : "Password is empty!"}
-                self.call_back(0, error = error)
-                print("Password is empty!")
+#                 error = {"type" : "warning", "info" : "Password is empty!"}
+#                 self.call_back(0, error = error)
+                yield "Password is empty!"
             self.fp.close()
 
     def decrypt(self, key = "", force = True):
