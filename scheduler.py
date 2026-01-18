@@ -305,24 +305,32 @@ class Scheluder(object):
                             except StopIteration:
 #                                 s = ticks_us()
                                 self.remove_task(self.current)
-                                for m in self.current.need_to_clean:
-                                    try:
-                                        m_name = m.__name__
-                                        exec("del %s" % m.__name__)
-                                        # exec("del %s" % m.__name__.split(".")[-1])
-                                        if hasattr(m, "main"):
-                                            del m.main
-                                        del sys.modules[m_name]
-                                        gc.collect()
-                                    except Exception as e:
-                                        h = "task: %s\n" % self.current.name
-                                        self.log(h, e)
-                                if self.current.reset_sys_path:
-                                    try:
-                                        sys.path.pop(0)
-                                    except Exception as e:
-                                        h = "task: %s\n" % self.current.name
-                                        self.log(h, e)
+                                cmd = self.current.name.split(" ")[0]
+                                same_cmd_tasks = 0
+                                for t in self.tasks:
+                                    if t.name.startswith(cmd):
+                                        same_cmd_tasks += 1
+                                # print("remain cmd: ", cmd, same_cmd_tasks)
+                                if same_cmd_tasks == 0:
+                                    # print("clean: ", self.current.need_to_clean)
+                                    for m in self.current.need_to_clean:
+                                        try:
+                                            m_name = m.__name__
+                                            exec("del %s" % m.__name__)
+                                            # exec("del %s" % m.__name__.split(".")[-1])
+                                            if hasattr(m, "main"):
+                                                del m.main
+                                            del sys.modules[m_name]
+                                            gc.collect()
+                                        except Exception as e:
+                                            h = "task: %s\n" % self.current.name
+                                            self.log(h, e)
+                                    if self.current.reset_sys_path:
+                                        try:
+                                            sys.path.pop(0)
+                                        except Exception as e:
+                                            h = "task: %s\n" % self.current.name
+                                            self.log(h, e)
                                 self.current.clean()
                                 # del self.current
                                 self.current = None
