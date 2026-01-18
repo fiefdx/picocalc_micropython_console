@@ -41,6 +41,7 @@ datasocket = None
 client_list = []
 verbose_l = 0
 client_busy = False
+status = "stopped"
 # Interfaces: (IP-Address (string), IP-Address (integer), Netmask (integer))
 
 _month_name = ("", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -435,6 +436,7 @@ def stop():
     global ftpsockets, datasocket
     global client_list
     global client_busy
+    global status
 
     for client in client_list:
         client.command_client.setsockopt(socket.SOL_SOCKET,
@@ -450,6 +452,7 @@ def stop():
     if datasocket is not None:
         datasocket.close()
         datasocket = None
+    status = "stopped"
     return "FTP server stopped!"
 
 
@@ -459,6 +462,7 @@ def start(port=21, verbose=0, splash=True):
     global verbose_l
     global client_list
     global client_busy
+    global status
 
     result = "FTP server start failed!"
 
@@ -491,6 +495,7 @@ def start(port=21, verbose=0, splash=True):
     datasocket.bind(('0.0.0.0', _DATA_PORT))
     datasocket.listen(1)
     datasocket.settimeout(10)
+    status = "running"
     return result
 
 def restart(port=21, verbose=0, splash=True):

@@ -29,6 +29,10 @@ def main(*args, **kwargs):
                 yield Condition.get().load(sleep = 0, send_msgs = [
                     Message.get().load({"output": r}, receiver = shell_id)
                 ])
+            elif args[0] == "status":
+                yield Condition.get().load(sleep = 0, send_msgs = [
+                    Message.get().load({"output": "ftpd: %s" % uftpd.status}, receiver = shell_id)
+                ])
             else:
                 yield Condition.get().load(sleep = 0, send_msgs = [
                     Message.get().load({"output": "Usage: ftpd start|stop|restart"}, receiver = shell_id)
