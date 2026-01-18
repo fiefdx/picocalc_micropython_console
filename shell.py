@@ -5,7 +5,7 @@ from micropython import const
 
 # from listfile import ListFile
 from scheduler import Condition, Task, Message
-from common import exists, path_join, isfile, isdir, path_split, abs_path
+from common import exists, path_join, isfile, isdir, path_split, abs_path, Resource
 from display import Colors as C
 
 
@@ -72,7 +72,9 @@ class Shell(object):
                 tmp_file.close()
                 history_file.close()
                 uos.remove(tmp_file_path)
-        self.history_file = open(self.history_file_path, "a")
+        if not hasattr(Resource, "history_file"):
+            Resource.history_file = open(self.history_file_path, "a")
+        self.history_file = Resource.history_file
         self.history_idx = len(self.history)
         
     def write_history(self, line):
