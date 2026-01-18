@@ -436,8 +436,8 @@ def keyboard_input(task, name, scheduler = None, interval = 50, display_id = Non
 #         b'\x83': "F3",
 #         b'\x84': "F4",
 #         b'\x85': "F5",
-        b'\x86': "F6",
-        b'\x87': "F7",
+        # b'\x86': "F6",
+        # b'\x87': "F7",
         b'\x88': "F8",
         b'\x89': "F9",
         b'\x90': "F10",
@@ -467,6 +467,8 @@ def keyboard_input(task, name, scheduler = None, interval = 50, display_id = Non
         b'\x1b[3~': "BB",
         b'\x81': "F1",
         b'\x82': "F2",
+        b'\x86': "F6",
+        b'\x87': "F7",
     }
     Resource.keyboard = k
     yield Condition.get().load(sleep = 1000)
@@ -524,6 +526,26 @@ def keyboard_input(task, name, scheduler = None, interval = 50, display_id = Non
                                     scheduler.current_shell_id = scheduler.shells[1][0]
                                     scheduler.set_log_to(scheduler.current_shell_id)
                                     yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"refresh": True}, receiver = scheduler.current_shell_id)])
+                                elif key == 'F6': # F6
+                                    if enable_sound:
+                                        yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
+                                    yield Condition.get().load(sleep = 0, send_msgs = [
+                                        Message.get().load({"clear": True}, receiver = display_id)
+                                    ])
+                                    scheduler.shell = scheduler.shells[2][1]
+                                    scheduler.current_shell_id = scheduler.shells[2][0]
+                                    scheduler.set_log_to(scheduler.current_shell_id)
+                                    yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"refresh": True}, receiver = scheduler.current_shell_id)])
+                                elif key == 'F7': # F7
+                                    if enable_sound:
+                                        yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
+                                    yield Condition.get().load(sleep = 0, send_msgs = [
+                                        Message.get().load({"clear": True}, receiver = display_id)
+                                    ])
+                                    scheduler.shell = scheduler.shells[3][1]
+                                    scheduler.current_shell_id = scheduler.shells[3][0]
+                                    scheduler.set_log_to(scheduler.current_shell_id)
+                                    yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"refresh": True}, receiver = scheduler.current_shell_id)])      
                                 elif key == "Ctrl-M":
                                     if enable_sound:
                                         enable_sound = False
@@ -588,10 +610,12 @@ if __name__ == "__main__":
         sound_id = s.add_task(Task.get().load(sound_output, "sound_output", condition = Condition.get(), kwargs = {"scheduler": s}))
         s.sound_id = sound_id
         shell_id_0 = s.add_task(Task.get().load(shell, "shell:0", condition = Condition.get(), kwargs = {"shell_id": 0, "scheduler": s, "display_id": display_id, "storage_id": storage_id}))
-        s.shell_id = shell_id_0
+        # s.shell_id = shell_id_0
         shell_id_1 = s.add_task(Task.get().load(shell, "shell:1", condition = Condition.get(), kwargs = {"shell_id": 1, "scheduler": s, "display_id": display_id, "storage_id": storage_id, "delay": 1200}))
-#         s.shell_id = shell_id_0
-#         s.set_log_to(shell_id)
+        shell_id_2 = s.add_task(Task.get().load(shell, "shell:2", condition = Condition.get(), kwargs = {"shell_id": 2, "scheduler": s, "display_id": display_id, "storage_id": storage_id, "delay": 1200}))
+        shell_id_3 = s.add_task(Task.get().load(shell, "shell:3", condition = Condition.get(), kwargs = {"shell_id": 3, "scheduler": s, "display_id": display_id, "storage_id": storage_id, "delay": 1200}))
+        # s.shell_id = shell_id_0
+        # s.set_log_to(shell_id)
         cursor_id = s.add_task(Task.get().load(cursor, "cursor", condition = Condition.get(), kwargs = {"interval": 500, "scheduler": s, "display_id": display_id, "storage_id": storage_id}))
         s.cursor_id = cursor_id
         keyboard_id = s.add_task(Task.get().load(keyboard_input, "keyboard_input", condition = Condition.get(), kwargs = {"scheduler": s, "interval": 50, "display_id": display_id}))
