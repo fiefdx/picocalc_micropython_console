@@ -11,7 +11,7 @@ from listfile import ListFile
 from shell import Shell
 from scheduler import Condition, Message
 from ollama import Chat
-from common import exists, path_join, isfile, isdir, ClipBoard
+from common import exists, path_join, isfile, isdir, mkdirs, ClipBoard
 from display import Colors as C
 from analyzer import tokenize
 from analyzer import TOKEN_KEYWORD, TOKEN_IDENT, TOKEN_NUMBER, TOKEN_STRING, TOKEN_COMMENT, TOKEN_OP, TOKEN_WS
@@ -27,15 +27,36 @@ class EditShell(object):
         TOKEN_COMMENT: C.blue,
         TOKEN_NUMBER: C.cyan,
     }
+    IDS = { # as many as 4 editors can be opened
+        0: False,
+        1: False,
+        2: False,
+        3: False,
+    }
+
+    @classmethod
+    def get_id(cls):
+        for i in range(4):
+            if cls.IDS[i] is False:
+                cls.IDS[i] = True
+                return i
 
     def __init__(self, file_path, display_size = (40, 29), cache_size = 28, ram = False):
         self.display_width = display_size[0]
         self.display_height = display_size[1]
         self.offset_col = 0
         self.cache_size = cache_size
-        self.cache = [] if ram else ListFile("/.edit_cache.json", shrink_threshold = 1024000) # []
-        self.edit_history = [] if ram else ListFile("/.edit_history_cache.json", shrink_threshold = 1024000) # []
-        self.edit_redo_cache = [] if ram else ListFile("/.edit_redo_cache.json", shrink_threshold = 1024000) # []
+        self.id = EditShell.get_id()
+        if not exists("/.cache"):
+            mkdirs("/.cache")
+        self.cache_path = "/.cache"
+        if exists("/sd"):
+            if not exists("/sd/.cache"):
+                mkdirs("/sd/.cache")
+            self.cache_path = "/sd/.cache"
+        self.cache = [] if ram else ListFile(path_join(self.cache_path, "edit_cache.%d.json" % self.id), shrink_threshold = 1024000) # []
+        self.edit_history = [] if ram else ListFile(path_join(self.cache_path, "edit_history_cache.%d.json" % self.id), shrink_threshold = 1024000) # []
+        self.edit_redo_cache = [] if ram else ListFile(path_join(self.cache_path, "edit_redo_cache.%d.json" % self.id), shrink_threshold = 1024000) # []
         self.edit_history_max_length = 1000
         self.edit_last_line = None
         self.cursor_color = 1
@@ -66,9 +87,9 @@ class EditShell(object):
         self.previous_offset_col = 0
         
     def set_ram(self, ram):
-        self.cache = [] if ram else ListFile("/.edit_cache.json", shrink_threshold = 1024000) # []
-        self.edit_history = [] if ram else ListFile("/.edit_history_cache.json", shrink_threshold = 1024000) # []
-        self.edit_redo_cache = [] if ram else ListFile("/.edit_redo_cache.json", shrink_threshold = 1024000)
+        self.cache = [] if ram else ListFile(path_join(self.cache_path, "edit_cache.%d.json" % self.id), shrink_threshold = 1024000) # []
+        self.edit_history = [] if ram else ListFile(path_join(self.cache_path, "edit_history_cache.%d.json" % self.id), shrink_threshold = 1024000) # []
+        self.edit_redo_cache = [] if ram else ListFile(path_join(self.cache_path, "edit_redo_cache.%d.json" % self.id), shrink_threshold = 1024000) # []
         
     def input_char(self, c):
         if c == "refresh":
@@ -824,6 +845,9 @@ class EditShell(object):
     def close(self):
         self.file.close()
         self.cache.clear()
+        self.edit_history.clear()
+        self.edit_redo_cache.clear()
+        EditShell.IDS[self.id] = False
         del self.cache
 
 def main(*args, **kwargs):
