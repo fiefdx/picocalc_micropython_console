@@ -128,7 +128,7 @@ def str_decrypt(v, k, iterations = 32):
     iterations must be 32 or 64
     return bytes
     '''
-    t = ticks_ms()
+    # t = ticks_ms()
     k = k.decode() if isinstance(k, bytes) else k
     iterations = 64 if iterations > 32 else 32
     # ascii to bin
@@ -157,7 +157,7 @@ def str_decrypt(v, k, iterations = 32):
     # if result[-7:] != "\0" * 7: return None
     if result[-7:] != b"\0" * 7: return ""
     # return str not unicode
-    print(ticks_diff(ticks_ms(), t), "ms")
+    # print(ticks_diff(ticks_ms(), t), "ms")
     return result[pos + 1: -7]
 
 
@@ -363,7 +363,7 @@ class CryptFile(object):
                     self.fp.seek(self.fname_pos, 0)
                     file_name = self.fp.read(self.fname_len)
                     file_name = str_decrypt(file_name, crypt_key)
-                    result = file_name
+                    result = file_name.decode("utf-8")
             else:
                 # print("The file[%s] is not a crypt file!" % self.file_path)
                 pass
