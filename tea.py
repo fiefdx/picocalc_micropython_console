@@ -162,7 +162,7 @@ def str_decrypt(v, k, iterations = 32):
 
 
 class CryptFile(object):
-    def __init__(self, file_path, call_back = None, delay = 0.1):
+    def __init__(self, file_path, call_back = None, delay = 10):
         '''
         @param call_back: is a function with param process percent. like, call_back(percent). 
         '''
@@ -184,7 +184,7 @@ class CryptFile(object):
         self.start_time = 0
 
     def open_source_file(self):
-        result = "[%s] is not a file!" % self.file_path
+        result = "%s is not a file!" % self.file_path
         if exists(self.file_path) and isfile(self.file_path):
             fp = open(self.file_path, "rb")
             fp.seek(0, 2)
@@ -210,11 +210,11 @@ class CryptFile(object):
 #             print("crypt_key: %s" % crypt_key)
         if not exists(self.crypt_file_path):
             crypt_fp = open(self.crypt_file_path, "wb")
-            yield "Output [%s]" % self.crypt_file_path
+            yield "Output: %s" % self.crypt_file_path
         else:
 #             error = {"type" : "warning", "info" : "File [%s] already exists!" % self.crypt_file_path}
 #             self.call_back(0, error = error)
-            yield "File [%s] exists!" % self.crypt_file_path
+            yield "%s exists!" % self.crypt_file_path
         if crypt_fp != None and self.fp != None:
             if crypt_key != "":
 #                 if self.call_back:
@@ -247,8 +247,8 @@ class CryptFile(object):
                         if percent > self.percent:
                             self.percent = percent
                             self.start_time = ticks_ms()
-#                             self.call_back(self.percent)
-                            yield "%s%%" % self.percent
+    #                             self.call_back(self.percent)
+                            yield "%.2f%%" % self.percent
                 crypt_fp.seek(17, 0)
                 crypt_fp.write(struct.pack(">Q", self.file_len))
 #                 print("file pos: %s, file len: %s" % (self.file_pos, self.file_len))
@@ -270,7 +270,7 @@ class CryptFile(object):
             crypt_key = md5twice(key)
         if self.fp != None:
             file_header = self.fp.read(5)
-            print("file header: %s" % file_header)
+            # print("file header: %s" % file_header)
             if file_header == self.file_header:
                 if crypt_key != "":
                     if self.call_back:
@@ -279,33 +279,33 @@ class CryptFile(object):
                     self.fname_len = struct.unpack(">L", self.fp.read(4))[0]
                     self.file_pos = struct.unpack(">L", self.fp.read(4))[0]
                     self.file_len = struct.unpack(">Q", self.fp.read(8))[0]
-                    print("fname_pos: %s, fname_len: %s, file_pos: %s, file_len: %s" % (self.fname_pos, self.fname_len, self.file_pos, self.file_len))
+                    # print("fname_pos: %s, fname_len: %s, file_pos: %s, file_len: %s" % (self.fname_pos, self.fname_len, self.file_pos, self.file_len))
                     self.fp.seek(self.fname_pos, 0)
                     file_name = self.fp.read(self.fname_len)
                     file_name = str_decrypt(file_name, crypt_key)
                     decrypt_file_path = path_join(path_join(*(self.file_path.split("/")[:-1])), file_name.decode("utf-8"))
-                    print(decrypt_file_path)
+                    # print(decrypt_file_path)
                     if not exists(decrypt_file_path):
                         decrypt_fp = open(decrypt_file_path, "wb")
-                        print("Create decrypt file path[%s]" % decrypt_file_path)
+                        yield "Output: %s" % decrypt_file_path
                     else:
                         if force:
                             os.remove(decrypt_file_path)
                             decrypt_fp = open(decrypt_file_path, "wb")
-                            print("Create decrypt file path[%s]" % decrypt_file_path)
+                            yield "Output: %s" % decrypt_file_path
                         else:
-                            error = {"type" : "warning", "info" : "File [%s] already exists!" % decrypt_file_path}
-                            self.call_back(0, error = error)
-                            print("Decrypt file path[%s] exists!" % decrypt_file_path)
+                            # error = {"type" : "warning", "info" : "File [%s] already exists!" % decrypt_file_path}
+                            # self.call_back(0, error = error)
+                            yield "%s exists!" % decrypt_file_path
                     crypt_length = get_encrypt_length(CRYPT_BLOCK)
-                    print(crypt_length)
+                    # print(crypt_length)
                     crypt_size = 0
                     self.start_time = ticks_ms()
                     if decrypt_fp != None:
                         n = 0
                         while True:
                             n += 1
-                            print(n)
+                            # print(n)
                             buf = ""
                             if self.file_len < crypt_length:
                                 buf = self.fp.read(self.file_len)
@@ -320,27 +320,28 @@ class CryptFile(object):
                             #decrypt_fp.flush()
                             #print(gc.mem_free())
                             crypt_size += crypt_length
-                            if self.call_back and crypt_size < self.file_len and ticks_diff(ticks_ms(), self.start_time) >= self.delay:
+                            if crypt_size < self.file_len and ticks_diff(ticks_ms(), self.start_time) >= self.delay:
                                 percent = crypt_size * 100 / self.file_len
                                 # self.call_back(percent)
                                 if percent > self.percent:
                                     self.percent = percent
                                     self.start_time = ticks_ms()
-                                    self.call_back(self.percent)
+                                    yield "%.2f%%" % self.percent
                             if self.file_len <= 0:
                                 break
-                        if self.call_back:
-                            self.call_back(100)
+                        # if self.call_back:
+                            # self.call_back(100)
+                        yield "100%"
                         decrypt_fp.flush()
                         decrypt_fp.close()
                 else:
-                    error = {"type" : "warning", "info" : "Password is empty!"}
-                    self.call_back(0, error = error)
-                    print("Password is empty!")
+                    # error = {"type" : "warning", "info" : "Password is empty!"}
+                    # self.call_back(0, error = error)
+                    yield "Password is empty!"
             else:
-                error = {"type" : "warning", "info" : "File [%s] is not a crypt file!" % self.file_path}
-                self.call_back(0, error = error)
-                print("The file[%s] is not a crypt file!" % self.file_path)
+                # error = {"type" : "warning", "info" : "File [%s] is not a crypt file!" % self.file_path}
+                # self.call_back(0, error = error)
+                yield "%s is not a crypt file!" % self.file_path
             self.fp.close()
 
     def decrypt_info(self, key = ""):
@@ -351,20 +352,21 @@ class CryptFile(object):
             crypt_key = md5twice(key)
         if self.fp != None:
             file_header = self.fp.read(5)
-            print("file header: %s" % file_header)
+            # print("file header: %s" % file_header)
             if file_header == self.file_header:
                 if crypt_key != "":
                     self.fname_pos = struct.unpack(">L", self.fp.read(4))[0]
                     self.fname_len = struct.unpack(">L", self.fp.read(4))[0]
                     self.file_pos = struct.unpack(">L", self.fp.read(4))[0]
                     self.file_len = struct.unpack(">Q", self.fp.read(8))[0]
-                    print("fname_pos: %s, fname_len: %s, file_pos: %s, file_len: %s" % (self.fname_pos, self.fname_len, self.file_pos, self.file_len))
+                    # print("fname_pos: %s, fname_len: %s, file_pos: %s, file_len: %s" % (self.fname_pos, self.fname_len, self.file_pos, self.file_len))
                     self.fp.seek(self.fname_pos, 0)
                     file_name = self.fp.read(self.fname_len)
                     file_name = str_decrypt(file_name, crypt_key)
                     result = file_name
             else:
-                print("The file[%s] is not a crypt file!" % self.file_path)
+                # print("The file[%s] is not a crypt file!" % self.file_path)
+                pass
             self.fp.close()
         return result
 
