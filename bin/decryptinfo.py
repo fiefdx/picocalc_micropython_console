@@ -2,7 +2,7 @@ import sys
 import uos
 
 from scheduler import Condition, Message
-from common import exists, path_join, isfile, isdir, path_split, mkdirs, copy, copyfile, copydir
+from common import exists, path_join, isfile, isdir, path_split, mkdirs, copy, copyfile, copydir, abs_path
 from tea import CryptFile
 
 coroutine = True
@@ -17,7 +17,7 @@ def main(*args, **kwargs):
     try:
         if len(args) == 2:
             password = args[0]
-            file_path = args[1]
+            file_path = abs_path(args[1])
             if exists(file_path) and isfile(file_path):
                 f = CryptFile(file_path)
                 success = f.open_source_file()
