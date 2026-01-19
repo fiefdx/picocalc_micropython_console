@@ -719,30 +719,40 @@ class EditShell(object):
             self.cursor_col = len(self.cache[self.cursor_row]) - self.offset_col
     
     def cursor_move_left(self):
-        self.cursor_col -= 1            
-        if len(self.cache[self.cursor_row]) >= self.offset_col:
-            if self.cursor_col < 0:
-                self.cursor_col = 0
-                if self.offset_col > 0:
-                    self.offset_col -= 1
-#                     self.cache_to_frame()
-                else:
-                    if self.cursor_row > 0:
-                        self.cursor_row -= 1
-                        self.cursor_col = len(self.cache[self.cursor_row]) % self.display_width
-                        self.offset_col = len(self.cache[self.cursor_row]) - self.cursor_col
+        self.cursor_col -= 1
+        if len(self.cache) > self.cursor_row:
+            if len(self.cache[self.cursor_row]) >= self.offset_col:
+                if self.cursor_col < 0:
+                    self.cursor_col = 0
+                    if self.offset_col > 0:
+                        self.offset_col -= 1
+    #                     self.cache_to_frame()
                     else:
-                        self.cursor_col = 0
-                        self.offset_col = 0
+                        if self.cursor_row > 0:
+                            self.cursor_row -= 1
+                            self.cursor_col = len(self.cache[self.cursor_row]) % self.display_width
+                            self.offset_col = len(self.cache[self.cursor_row]) - self.cursor_col
+                        else:
+                            self.cursor_col = 0
+                            self.offset_col = 0
+            else:
+                if self.cursor_col + self.offset_col <= 0:
+                    self.cursor_col = -self.offset_col
         else:
-            if self.cursor_col + self.offset_col <= 0:
-                self.cursor_col = -self.offset_col
+            self.cursor_row = len(self.cache) - 1
+            if self.cursor_row >= 0:
+                self.cursor_col = len(self.cache[self.cursor_row]) % self.display_width
+                self.offset_col = len(self.cache[self.cursor_row]) - self.cursor_col
+            else:
+                self.cursor_col = 0
+                self.offset_col = 0
+
         if self.cursor_row < self.display_offset_row:
             self.display_offset_row = self.cursor_row
         
     def cursor_move_right(self, n = 1):
         self.cursor_col += n
-        if len(self.cache[self.cursor_row]) >= self.cursor_col + self.offset_col - 1:
+        if len(self.cache[self.cursor_row]) > self.cursor_col + self.offset_col - 1:
             if self.cursor_col >= self.display_width:
                 self.offset_col += n
 #                 self.cache_to_frame()
