@@ -33,6 +33,7 @@ from common import ticks_ms, ticks_add, ticks_diff, sleep_ms, Resource
 from shell import Shell
 from keyboard import Keyboard
 from basic_shell_alone import BasicShell
+import settings_pico2 as settings
 # from writer_fast import CWriter
 sys.path.insert(0, "/bin")
 sys.path.append("/")
@@ -130,13 +131,8 @@ def render(category, msg, lcd, refresh):
         
 def display(task, name, scheduler = None):
     try:
-        cs = Pin(13, Pin.OUT, value = 1)
-        dc = Pin(14, Pin.OUT)
-        rst = Pin(15, Pin.OUT)
-        sck = Pin(10)
-        mosi = Pin(11)
-        spi = SPI(1, baudrate = 62_500_000, sck = sck, mosi = mosi)
-        lcd = ILI9488(spi, cs, dc, rst)
+        spi = SPI(settings.display_spi, baudrate = settings.display_baudrate, sck = settings.display_sck, mosi = settings.display_mosi)
+        lcd = ILI9488(spi, settings.display_cs, settings.display_dc, settings.display_rst)
         Resource.display = lcd
         lcd.fill(lcd.rgb(0, 0, 0))
         lcd.show()
@@ -243,11 +239,11 @@ def display(task, name, scheduler = None):
         
         
 def storage(task, name, scheduler = None):
-    spi = SPI(0, baudrate=13200000, sck=Pin(18), mosi=Pin(19), miso=Pin(16))
+    spi = SPI(settings.sd_spi, baudrate = settings.sd_baudrate, sck = settings.sd_sck, mosi = settings.sd_mosi, miso = settings.sd_miso)
     sd = None
     vfs = None
     try:
-        sd = sdcard.SDCard(spi, Pin(17), baudrate=13200000)
+        sd = sdcard.SDCard(spi, settings.sd_cs, baudrate = settings.sd_baudrate)
         vfs = uos.VfsFat(sd)
         uos.mount(vfs, "/sd")
 #         print(uos.listdir("/sd"))
@@ -267,19 +263,19 @@ def storage(task, name, scheduler = None):
                     import_str = "import %s; sys.modules['%s'] = %s" % (module, module, module)
                     exec(import_str)
                 if module in ("mount", "umount"):
-                    output, sd, vfs = sys.modules["%s" % module].main(*args[1:], shell_id = scheduler.shell_id, sd = sd, vfs = vfs, spi = spi, sd_cs = sd_cs)
+                    output, sd, vfs = sys.modules["%s" % module].main(*args[1:], shell_id = scheduler.current_shell_id, sd = sd, vfs = vfs, spi = spi, sd_cs = settings.sd_cs)
                 else:
-                    output = sys.modules["%s" % module].main(*args[1:], shell_id = scheduler.shell_id, scheduler = scheduler)
+                    output = sys.modules["%s" % module].main(*args[1:], shell_id = scheduler.current_shell_id, scheduler = scheduler)
                 exec("del %s" % module)
                 del sys.modules["%s" % module].main
                 del sys.modules["%s" % module]
                 gc.collect()
                 yield Condition.get().load(sleep = 0, send_msgs = [
-                    Message.get().load({"output": output}, receiver = scheduler.shell_id)
+                    Message.get().load({"output": output}, receiver = scheduler.current_shell_id)
                 ])
         except Exception as e:
             yield Condition.get().load(sleep = 0, send_msgs = [
-                Message.get().load({"output": str(e)}, receiver = scheduler.shell_id)
+                Message.get().load({"output": str(e)}, receiver = scheduler.current_shell_id)
             ])
         msg.release()
         
@@ -393,7 +389,7 @@ def shell(task, name, scheduler = None, display_id = None, storage_id = None):
             
             
 def keyboard_input(task, name, scheduler = None, interval = 50, shell_id = None, display_id = None):
-    k = Keyboard()
+    k = Keyboard(settings.keyboard_scl, settings.keyboard_sda, i2c = settings.keyboard_i2c, freq = settings.keyboard_baudrate)
     key_map_ignore = {
         b'\x81': "F1",
         b'\x82': "F2",
@@ -478,8 +474,8 @@ def sound_output(task, name, scheduler = None):
             tone_freq = msg.content["freq"]
             tone_length = msg.content["length"]
             tone_volume = msg.content["volume"]
-            left_pwm = PWM(Pin(26))
-            right_pwm = PWM(Pin(27))
+            left_pwm = PWM(settings.pwm_left)
+            right_pwm = PWM(settings.pwm_right)
             if tone_freq >= 20:
                 left_pwm.freq(tone_freq)
                 right_pwm.freq(tone_freq)
@@ -500,7 +496,6 @@ def sound_output(task, name, scheduler = None):
 
 if __name__ == "__main__":
     try:
-        led = machine.Pin("LED", machine.Pin.OUT)
         Message.init_pool(15)
         Condition.init_pool(12)
         Task.init_pool(12)
@@ -514,8 +509,8 @@ if __name__ == "__main__":
         s.shell_id = shell_id
         s.set_log_to(shell_id)
         keyboard_id = s.add_task(Task.get().load(keyboard_input, "keyboard_input", condition = Condition.get(), kwargs = {"scheduler": s, "interval": 30, "shell_id": shell_id, "display_id": display_id}))
-        led.on()
-        # led.off()
+        settings.led.on()
+        # settings.led.off()
         s.run()
     except Exception as e:
         import sys
