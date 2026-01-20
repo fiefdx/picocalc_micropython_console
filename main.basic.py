@@ -414,6 +414,7 @@ def keyboard_input(task, name, scheduler = None, interval = 50, shell_id = None,
         b'\x02': "Ctrl-B",
         b'\x03': "Ctrl-C",
         b'\x07': "Ctrl-G",
+        b'\r': "Ctrl-M",
         b'\x16': "Ctrl-V",
         b'\x18': "Ctrl-X",
         b'\x1a': "Ctrl-Z",
@@ -425,16 +426,17 @@ def keyboard_input(task, name, scheduler = None, interval = 50, shell_id = None,
     Resource.keyboard = k
     yield Condition.get().load(sleep = 1000)
     key_sound = const(2000)
+    enable_sound = False
     keys = bytearray(30)
     while True:
         try:
             n = k.readinto(keys)
             if n is not None:
-                print("size: ", n)
-                print("keys: ", keys[:n])
-                if n == 1 or n == 2:
+                # print("size: ", n)
+                # print("keys: ", keys[:n])
+                if n == 1 or n == 2 or n == 3 or n == 4:
                     code = bytes(keys[:n])
-                    print("code: ", code, code in key_map)
+                    # print("code: ", code, code in key_map)
                     if code not in key_map_ignore:
                         try:
 #                             key = code.decode()
@@ -452,13 +454,22 @@ def keyboard_input(task, name, scheduler = None, interval = 50, shell_id = None,
                                 key = key_map[code]
                             else:
                                 key = code.decode()
-                            print("key2: ", key)
-                            if scheduler.shell and scheduler.shell.session_task_id and scheduler.exists_task(scheduler.shell.session_task_id):
-                                yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
-                                yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"msg": key, "keys": []}, receiver = scheduler.shell.session_task_id)])
+                            # print("key2: ", key)
+                            if key == "Ctrl-M":
+                                if enable_sound:
+                                    enable_sound = False
+                                else:
+                                    yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
+                                    enable_sound = True
                             else:
-                                yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
-                                yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"char": key}, receiver = shell_id)])
+                                if scheduler.shell and scheduler.shell.session_task_id and scheduler.exists_task(scheduler.shell.session_task_id):
+                                    if enable_sound:
+                                        yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
+                                    yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"msg": key, "keys": []}, receiver = scheduler.shell.session_task_id)])
+                                else:
+                                    if enable_sound:
+                                        yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
+                                    yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"char": key}, receiver = shell_id)])
                         except Exception as e:
                             print("Except: ", code, e)
         except Exception as e:
