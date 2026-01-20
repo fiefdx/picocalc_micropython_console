@@ -41,7 +41,7 @@ class EditShell(object):
                 cls.IDS[i] = True
                 return i
 
-    def __init__(self, file_path, display_size = (40, 29), cache_size = 28, ram = False):
+    def __init__(self, file_path, display_size = (40, 29), cache_size = 28, ram = True):
         self.display_width = display_size[0]
         self.display_height = display_size[1]
         self.offset_col = 0
@@ -872,7 +872,7 @@ def main(*args, **kwargs):
     try:
         if len(kwargs["args"]) > 0:
             file_path = kwargs["args"][0]
-            ram = False
+            ram = True
             if len(kwargs["args"]) > 1:
                 ram = int(kwargs["args"][1]) == 1
             s = EditShell(file_path, ram = ram)
