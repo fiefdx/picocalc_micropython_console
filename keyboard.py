@@ -30,9 +30,9 @@ _StateRelease = const(3)
 
 
 class Keyboard:
-    def __init__(self,sclPin=7,sdaPin=6,address=0x1f):
-        self.hardwarekeyBuf = deque((),30)
-        self.i2c = I2C(1,scl=Pin(sclPin),sda=Pin(sdaPin),freq=10000)
+    def __init__(self, sclPin, sdaPin, i2c = 1, freq = 10000, address=0x1f):
+        self.hardwarekeyBuf = deque((), 30)
+        self.i2c = I2C(i2c, scl = sclPin, sda = sdaPin, freq = freq)
         #self.i2c.scan()
         self.ignor = True
         self.address = address
