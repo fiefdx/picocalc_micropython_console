@@ -1,4 +1,5 @@
 from machine import Pin
+from micropython import const
 
 display_cs = Pin(13, Pin.OUT, value = 1)
 display_dc = Pin(14, Pin.OUT)
