@@ -1,0 +1,26 @@
+from machine import Pin
+
+display_cs = Pin(13, Pin.OUT, value = 1)
+display_dc = Pin(14, Pin.OUT)
+display_rst = Pin(15, Pin.OUT)
+display_sck = Pin(10)
+display_mosi = Pin(11)
+display_spi = const(1)
+display_baudrate = const(62_500_000)
+
+keyboard_scl = Pin(7)
+keyboard_sda = Pin(6)
+keyboard_i2c = const(1)
+keyboard_baudrate = const(10000)
+
+sd_cs = Pin(17)
+sd_sck = Pin(18)
+sd_mosi = Pin(19)
+sd_miso = Pin(16)
+sd_spi = const(0)
+sd_baudrate = const(13200000)
+
+pwm_left = Pin(26)
+pwm_right = Pin(27)
+
+led = Pin("LED", Pin.OUT)
