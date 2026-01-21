@@ -46,11 +46,21 @@ if microcontroller:
 
 def monitor(task, name, scheduler = None, display_id = None):
     yield Condition.get().load(sleep = 2000)
+    n = 0
+    ram_free = 0
+    ram_used = 0
+    ram_total = 0
+    size = 0
+    free = 0
+    used = 0
+    plugged_in = False
+    level = 0
     while True:
         gc.collect()
-        ram_free = gc.mem_free()
-        ram_used = gc.mem_alloc()
-        ram_total = ram_free + ram_used
+        if n % 2 == 0:
+            ram_free = gc.mem_free()
+            ram_used = gc.mem_alloc()
+            ram_total = ram_free + ram_used
 #         #print(int(100 - (gc.mem_free() * 100 / (264 * 1024))), gc.mem_free())
 #         monitor_msg = "CPU%s:%3d%%  RAM:%3d%%" % (scheduler.cpu, int(100 - scheduler.idle), int(100 - (scheduler.mem_free() * 100 / ram_total)))
 #         print(monitor_msg)
@@ -64,20 +74,23 @@ def monitor(task, name, scheduler = None, display_id = None):
 #         print(monitor_msg)
 #         # print(Message.remain(), Condition.remain(), Task.remain())
 #         # yield Condition.get().load(sleep = 1000)
-        stat = os.statvfs("/")
-        size = stat[1] * stat[2]
-        free = stat[0] * stat[3]
-        used = size - free
+        if n % 10 == 0:
+            stat = os.statvfs("/")
+            size = stat[1] * stat[2]
+            free = stat[0] * stat[3]
+            used = size - free
 #         print("Total: %6.2fK, Used: %6.2fK, Free: %6.2fK" % (size / 1024.0, used / 1024.0, free / 1024.0))
 #         yield Condition.get().load(
 #             sleep = 2000
 #         )
-        plugged_in = False
-        level = 0
-        if Resource.keyboard:
-            b = Resource.keyboard.battery_status()
-            plugged_in = b["charging"]
-            level = b["level"]
+        if n % 5 == 0:
+            if Resource.keyboard:
+                b = Resource.keyboard.battery_status()
+                plugged_in = b["charging"]
+                level = b["level"]
+        n += 1
+        if n >= 20:
+            n = 0
         yield Condition.get().load(
             sleep = 1000,
             send_msgs = [Message.get().load(
