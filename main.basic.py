@@ -22,17 +22,17 @@ except:
 from machine import Pin, SPI, PWM
 from micropython import const
 
-from basictoken import BASICToken as Token
+from lib.basictoken import BASICToken as Token
 
-import sdcard
+from lib import sdcard
 # import font8
 # import font7
-from display import ILI9488, Colors as C
-from scheduler import Scheluder, Condition, Task, Message
-from common import ticks_ms, ticks_add, ticks_diff, sleep_ms, Resource
-from shell import Shell
-from keyboard import Keyboard
-from basic_shell_alone import BasicShell
+from lib.display import ILI9488, Colors as C
+from lib.scheduler import Scheluder, Condition, Task, Message
+from lib.common import ticks_ms, ticks_add, ticks_diff, sleep_ms, Resource
+from lib.shell import Shell
+from lib.keyboard import Keyboard
+from lib.basic_shell_alone import BasicShell
 import settings_pico2 as settings
 # from writer_fast import CWriter
 sys.path.insert(0, "/bin")
@@ -311,7 +311,7 @@ def shell(task, name, scheduler = None, display_id = None, storage_id = None):
     yield Condition.get().load(sleep = 1000)
     #s = Shell()
     try:
-        s = BasicShell(display_size = (39, 28), cache_size = (-1, 50), history_length = 50, scheduler = scheduler, storage_id = storage_id, display_id = display_id)
+        s = BasicShell(display_size = (39, 29), cache_size = (-1, 50), history_length = 50, scheduler = scheduler, storage_id = storage_id, display_id = display_id)
         # print = s.print
         Token.print = s.print
         s.write_line("           Welcome to PyBASIC")

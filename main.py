@@ -23,14 +23,14 @@ except:
 from machine import Pin, SPI, PWM
 from micropython import const
 
-import sdcard
+from lib import sdcard
 # import font8
 # import font7
-from display import ILI9488, Colors as C
-from scheduler import Scheluder, Condition, Task, Message
-from common import Resource
-from shell import Shell
-from keyboard import Keyboard
+from lib.display import ILI9488, Colors as C
+from lib.scheduler import Scheluder, Condition, Task, Message
+from lib.common import Resource
+from lib.shell import Shell
+from lib.keyboard import Keyboard
 import settings_pico2 as settings
 # from writer_fast import CWriter
 sys.path.insert(0, "/bin")
