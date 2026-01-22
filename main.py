@@ -56,48 +56,52 @@ def monitor(task, name, scheduler = None, display_id = None):
     plugged_in = False
     level = 0
     while True:
-        gc.collect()
-        if n % 2 == 0:
-            ram_free = gc.mem_free()
-            ram_used = gc.mem_alloc()
-            ram_total = ram_free + ram_used
-#         #print(int(100 - (gc.mem_free() * 100 / (264 * 1024))), gc.mem_free())
-#         monitor_msg = "CPU%s:%3d%%  RAM:%3d%%" % (scheduler.cpu, int(100 - scheduler.idle), int(100 - (scheduler.mem_free() * 100 / ram_total)))
-#         print(monitor_msg)
-#         #print(len(scheduler.tasks))
-#         #scheduler.add_task(Task.get().load(free.main, "test", condition = Condition.get(), kwargs = {"args": [], "shell_id": scheduler.shell_id}))
-#         monitor_msg = "R%6.2f%%|F%7.2fk/%d|U%7.2fk/%d" % (100.0 - (ram_free * 100 / ram_total),
-#                                                           ram_free / 1024,
-#                                                           ram_free,
-#                                                           ram_used / 1024,
-#                                                           ram_used)
-#         print(monitor_msg)
-#         # print(Message.remain(), Condition.remain(), Task.remain())
-#         # yield Condition.get().load(sleep = 1000)
-        if n % 10 == 0:
-            stat = os.statvfs("/")
-            size = stat[1] * stat[2]
-            free = stat[0] * stat[3]
-            used = size - free
-#         print("Total: %6.2fK, Used: %6.2fK, Free: %6.2fK" % (size / 1024.0, used / 1024.0, free / 1024.0))
-#         yield Condition.get().load(
-#             sleep = 2000
-#         )
-        if n % 5 == 0:
-            if Resource.keyboard:
-                b = Resource.keyboard.battery_status()
-                plugged_in = b["charging"]
-                level = b["level"]
-        n += 1
-        if n >= 20:
-            n = 0
-        yield Condition.get().load(
-            sleep = 1000,
-            send_msgs = [Message.get().load(
-                {"stats": (scheduler.cpu, int(100 - scheduler.idle), 100.0 - (ram_free * 100 / (ram_total)), ram_free, ram_used, size, free, used, plugged_in, level)},
-                receiver = scheduler.current_shell_id
-            )]
-        )
+        try:
+            gc.collect()
+            if n % 2 == 0:
+                ram_free = gc.mem_free()
+                ram_used = gc.mem_alloc()
+                ram_total = ram_free + ram_used
+    #         #print(int(100 - (gc.mem_free() * 100 / (264 * 1024))), gc.mem_free())
+    #         monitor_msg = "CPU%s:%3d%%  RAM:%3d%%" % (scheduler.cpu, int(100 - scheduler.idle), int(100 - (scheduler.mem_free() * 100 / ram_total)))
+    #         print(monitor_msg)
+    #         #print(len(scheduler.tasks))
+    #         #scheduler.add_task(Task.get().load(free.main, "test", condition = Condition.get(), kwargs = {"args": [], "shell_id": scheduler.shell_id}))
+    #         monitor_msg = "R%6.2f%%|F%7.2fk/%d|U%7.2fk/%d" % (100.0 - (ram_free * 100 / ram_total),
+    #                                                           ram_free / 1024,
+    #                                                           ram_free,
+    #                                                           ram_used / 1024,
+    #                                                           ram_used)
+    #         print(monitor_msg)
+    #         # print(Message.remain(), Condition.remain(), Task.remain())
+    #         # yield Condition.get().load(sleep = 1000)
+            if n % 10 == 0:
+                stat = os.statvfs("/")
+                size = stat[1] * stat[2]
+                free = stat[0] * stat[3]
+                used = size - free
+    #         print("Total: %6.2fK, Used: %6.2fK, Free: %6.2fK" % (size / 1024.0, used / 1024.0, free / 1024.0))
+    #         yield Condition.get().load(
+    #             sleep = 2000
+    #         )
+            if n % 5 == 0:
+                if Resource.keyboard:
+                    b = Resource.keyboard.battery_status()
+                    plugged_in = b["charging"]
+                    level = b["level"]
+            n += 1
+            if n >= 20:
+                n = 0
+            yield Condition.get().load(
+                sleep = 1000,
+                send_msgs = [Message.get().load(
+                    {"stats": (scheduler.cpu, int(100 - scheduler.idle), 100.0 - (ram_free * 100 / (ram_total)), ram_free, ram_used, size, free, used, plugged_in, level)},
+                    receiver = scheduler.current_shell_id
+                )]
+            )
+        except Exception as e:
+            sys.print_exception(e)
+
 
 
 def render_bricks(name, msg, lcd):
