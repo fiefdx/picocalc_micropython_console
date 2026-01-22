@@ -92,7 +92,6 @@ def request(method, url, data=None, json=None, headers={}, stream=None, cache_pa
                 s.write(b"Content-Length: %d\r\n" % data.length())
                 s.write(b"\r\n")
                 for line in data.iter_lines():
-                    print(line)
                     s.write(line)
             else:
                 s.write(b"Content-Length: %d\r\n" % len(data))
