@@ -4,6 +4,7 @@ import time
 from math import ceil
 from io import StringIO
 
+from listfile import ListFile
 from shell import Shell
 from scheduler import Condition, Message
 from ollama import Chat
@@ -14,16 +15,24 @@ coroutine = True
 
 
 class ChatShell(Shell):
-    def __init__(self, display_size = (19, 9), cache_size = (-1, 500), history_length = 100, host = "", port = 11434, model = "llama:3.2", stream = False, prompt_c = ">", scheduler = None, display_id = None, storage_id = None, history_file_path = "/.chat_history"):
+    def __init__(self, display_size = (19, 9), cache_size = (-1, 100), history_length = 100, host = "", port = 11434, model = "llama:3.2", stream = False, prompt_c = ">", scheduler = None, display_id = None, storage_id = None, history_file_path = "/.chat_history"):
         self.display_width = display_size[0]
         self.display_height = display_size[1]
         self.display_width_with_prompt = display_size[0] + len(prompt_c)
         self.history_length = history_length
         self.prompt_c = prompt_c
+        if not exists("/.cache"):
+            mkdirs("/.cache")
+        self.cache_path = "/.cache"
+        if exists("/sd"):
+            if not exists("/sd/.cache"):
+                mkdirs("/sd/.cache")
+            self.cache_path = "/sd/.cache"
         self.history = []
         self.cache_width = cache_size[0]
         self.cache_lines = cache_size[1]
-        self.cache = []
+        self.cache = ListFile(path_join(self.cache_path, "chat_cache.txt"), shrink_threshold = 1024000) # []
+        # self.cache = []
         self.cursor_color = 1
         self.current_row = 0
         self.current_col = 0
@@ -42,13 +51,6 @@ class ChatShell(Shell):
         self.history_file_path = history_file_path
         self.stats = ""
         self.loading = True
-        if not exists("/.cache"):
-            mkdirs("/.cache")
-        self.cache_path = "/.cache"
-        if exists("/sd"):
-            if not exists("/sd/.cache"):
-                mkdirs("/sd/.cache")
-            self.cache_path = "/sd/.cache"
         self.chat = Chat(host = host, port = port, model = model, stream = stream, cache_file = path_join(self.cache_path, ".chat.cache.txt"))
         self.chat_log = None
         self.load_history()
@@ -136,8 +138,8 @@ class ChatShell(Shell):
                         success, models = self.chat.models()
                         if success:
                             lines = ""
-                            for m in models:
-                                lines += m["name"] + "\n"
+                            for name in models:
+                                lines += name + "\n"
                             if lines.endswith("\n"):
                                 lines = lines[:-1]
                         else:
@@ -188,7 +190,10 @@ class ChatShell(Shell):
                 self.cache.pop(0)
             self.current_row = len(self.cache)
         except Exception as e:
-            self.write_lines("error: %s" % str(e), end = True)
+            buf = StringIO()
+            sys.print_exception(e, buf)
+            reason = buf.getvalue()
+            self.write_lines("error: %s" % str(reason), end = True)
         
     def write_char(self, c):
         if c == "\n":
