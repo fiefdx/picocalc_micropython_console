@@ -4,6 +4,67 @@ import json
 import request as requests
 
 
+def json_to_python(s):
+    if s[0] == '"' and s[-1] == '"':
+        s = s[1:-1]
+
+    s = s.replace('\\n', '\n') \
+         .replace('\\r', '\r') \
+         .replace('\\t', '\t') \
+         .replace('\\"', '"') \
+         .replace('\\\\', '\\')
+    return s
+
+
+def json_to_string(s):
+    n_in = len(s)
+    if n_in < 2:
+        return s
+
+    # pass 1: count decoded length
+    i = 1
+    end = n_in - 1
+    n = 2   # keep start and end chars
+
+    while i < end:
+        if s[i] == '\\':
+            i += 2
+        else:
+            i += 1
+        n += 1
+
+    # pass 2: fill buffer
+    buf = bytearray(n)
+
+    # keep start char
+    buf[0] = ord(s[0])
+
+    j = 1
+    i = 1
+
+    while i < end:
+        c = s[i]
+        if c == '\\':
+            i += 1
+            c = s[i]
+            if c == 'n':   buf[j] = 10
+            elif c == 'r': buf[j] = 13
+            elif c == 't': buf[j] = 9
+            elif c == '"': buf[j] = 34
+            elif c == '\\':buf[j] = 92
+            else:          buf[j] = ord(c)
+        else:
+            buf[j] = ord(c)
+        j += 1
+        i += 1
+
+    # keep end char
+    buf[j] = ord(s[-1])
+
+    return buf.decode()
+
+
+
 class ContextFile(object):
     def __init__(self, file_path):
         self.file_path = file_path
@@ -77,7 +138,7 @@ class ChatRAM(object):
         if r.status_code == 200:
             models = []
             for m in r.json()["models"]:
-                models.append({"name": m["name"]})
+                models.append(m["name"])
             return True, models
         else:
             return False, r.reason
@@ -211,7 +272,7 @@ class Chat(object):
                             content.append(c)
                             last_c = c
                 self.data.append_message(b'{"role": "%s", "content": "%s"}' % (role.decode(), content.decode()))
-                return True, content.decode()
+                return True, json_to_string(content.decode())# json.loads(b'["%s"]' % content.decode())[0]
         else:
             return False, r.reason
 
