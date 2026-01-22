@@ -42,7 +42,14 @@ class ChatShell(Shell):
         self.history_file_path = history_file_path
         self.stats = ""
         self.loading = True
-        self.chat = Chat(host = host, port = port, model = model, stream = stream)
+        if not exists("/.cache"):
+            mkdirs("/.cache")
+        self.cache_path = "/.cache"
+        if exists("/sd"):
+            if not exists("/sd/.cache"):
+                mkdirs("/sd/.cache")
+            self.cache_path = "/sd/.cache"
+        self.chat = Chat(host = host, port = port, model = model, stream = stream, cache_file = path_join(self.cache_path, ".chat.cache.txt"))
         self.chat_log = None
         self.load_history()
         # self.clear()
@@ -108,6 +115,7 @@ class ChatShell(Shell):
                         if not exists("/sd/chat_log"):
                             mkdirs("/sd/chat_log")
                         self.chat_log = open(path_join("/sd/chat_log", name), "a")
+                        self.chat.clear()
                         self.write_lines("new chat to %s" % name, end = True)
                     elif cmd == "info":
                         message = "host: %s\nport: %s\nmodel: %s\nctx: %s\n" % (self.chat.host, self.chat.port, self.chat.model, self.chat.context_length)
