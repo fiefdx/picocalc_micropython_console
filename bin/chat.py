@@ -15,12 +15,27 @@ coroutine = True
 
 
 class ChatShell(Shell):
-    def __init__(self, display_size = (19, 9), cache_size = (-1, 100), history_length = 100, host = "", port = 11434, model = "llama:3.2", stream = False, prompt_c = ">", scheduler = None, display_id = None, storage_id = None, history_file_path = "/.chat_history"):
+    IDS = { # as many as 4 editors can be opened
+        0: False,
+        1: False,
+        2: False,
+        3: False,
+    }
+
+    @classmethod
+    def get_id(cls):
+        for i in range(4):
+            if cls.IDS[i] is False:
+                cls.IDS[i] = True
+                return i
+
+    def __init__(self, display_size = (19, 9), cache_size = (-1, 100), history_length = 100, host = "", port = 11434, model = "llama:3.2", stream = False, prompt_c = ">", scheduler = None, display_id = None, storage_id = None, history_file_path = "/.chat_history", ram = True):
         self.display_width = display_size[0]
         self.display_height = display_size[1]
         self.display_width_with_prompt = display_size[0] + len(prompt_c)
         self.history_length = history_length
         self.prompt_c = prompt_c
+        self.id = ChatShell.get_id()
         if not exists("/.cache"):
             mkdirs("/.cache")
         self.cache_path = "/.cache"
@@ -31,8 +46,7 @@ class ChatShell(Shell):
         self.history = []
         self.cache_width = cache_size[0]
         self.cache_lines = cache_size[1]
-        self.cache = ListFile(path_join(self.cache_path, "chat_cache.txt"), shrink_threshold = 1024000) # []
-        # self.cache = []
+        self.cache = [] if ram else ListFile(path_join(self.cache_path, "chat_cache.%d.txt" % self.id), shrink_threshold = 1024000) # []
         self.cursor_color = 1
         self.current_row = 0
         self.current_col = 0
@@ -51,7 +65,7 @@ class ChatShell(Shell):
         self.history_file_path = history_file_path
         self.stats = ""
         self.loading = True
-        self.chat = Chat(host = host, port = port, model = model, stream = stream, cache_file = path_join(self.cache_path, ".chat.cache.txt"))
+        self.chat = Chat(host = host, port = port, model = model, stream = stream, cache_file = path_join(self.cache_path, "chat_request_cache.%d.txt" % self.id))
         self.chat_log = None
         self.load_history()
         # self.clear()
@@ -59,6 +73,9 @@ class ChatShell(Shell):
     # def clear(self):
     #     self.term = StringIO()
     #     os.dupterm(self.term)
+
+    def set_ram(self, ram):
+        self.cache = [] if ram else ListFile(path_join(self.cache_path, "chat_cache.%d.txt" % self.id), shrink_threshold = 1024000) # []
     
     def load_history(self):
         if exists(self.history_file_path):
@@ -241,6 +258,11 @@ class ChatShell(Shell):
             self.loading = False
         return data
 
+    def close(self):
+        self.cache.clear()
+        ChatShell.IDS[self.id] = False
+        del self.cache
+
 
 def main(*args, **kwargs):
     task = args[0]
@@ -283,6 +305,7 @@ def main(*args, **kwargs):
                 if msg:
                     c = msg.content["msg"]
                     msg.release()
+        s.close()
         shell.disable_output = False
         shell.current_shell = None
         shell.loading = True
