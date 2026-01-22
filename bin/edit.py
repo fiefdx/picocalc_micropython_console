@@ -79,7 +79,7 @@ class EditShell(object):
         self.select_start_row = 0
         self.select_start_col = 0
         self.exit_count = 0
-        self.chat = Chat(host = "", port = 11434, model = "llama3.2:1b")
+        self.chat = Chat(host = "", port = 11434, model = "llama3.2:1b", cache_file = path_join(self.cache_path, ".chat.cache.%d.txt" % self.id))
         self.highlight = self.file_path.endswith(".py")
         self.frame_previous = None
         self.frame_force_update = False
