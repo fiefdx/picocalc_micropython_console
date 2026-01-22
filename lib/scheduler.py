@@ -1,0 +1,366 @@
+import gc
+import sys
+from io import StringIO
+from time import ticks_ms, ticks_us, ticks_add, ticks_diff, sleep_ms, sleep_us
+from micropython import const
+
+
+class Message(object):
+    pool = []
+
+    @classmethod
+    def init_pool(cls, size = 100):
+        for i in range(size):
+            cls.pool.append(Message("", processed = True))
+
+    @classmethod
+    def get(cls):
+        for m in cls.pool:
+            if m.processed:
+                m.processed = False
+                return m
+            
+    @classmethod
+    def remain(cls):
+        n = 0
+        for m in cls.pool:
+            if m.processed:
+                n += 1
+        return n
+
+    def __init__(self, content, sender = None, sender_name = "", receiver = None, processed = False):
+        self.load(content, sender, sender_name, receiver, processed)
+
+    def load(self, content, sender = None, sender_name = "", receiver = None, processed = False):
+        self.content = content
+        self.sender = sender
+        self.sender_name = sender_name
+        self.receiver = receiver
+        self.processed = processed
+        return self
+
+    def release(self):
+        del self.content
+        self.content = ""
+        self.sender = None
+        del self.sender_name
+        self.sender_name = ""
+        self.receiver = None
+        self.processed = True
+
+
+class Condition(object):
+    pool = []
+    
+    @classmethod
+    def init_pool(cls, size = 100):
+        for i in range(size):
+            cls.pool.append(Condition(processed = True))
+
+    @classmethod
+    def get(cls):
+        for c in cls.pool:
+            if c.processed:
+                c.resume_at = ticks_add(ticks_ms(), 0)
+                c.wait_msg = False
+                c.processed = False
+                return c
+            
+    @classmethod
+    def remain(cls):
+        n = 0
+        for c in cls.pool:
+            if c.processed:
+                n += 1
+        return n
+    
+    def __init__(self, code = 0, sleep = 0, send_msgs = [], wait_msg = False, processed = False):
+        self.load(code, sleep, send_msgs, wait_msg, processed)
+        
+    def load(self, code = 0, sleep = 0, send_msgs = [], wait_msg = False, processed = False):
+        self.code = code
+        self.resume_at = ticks_add(ticks_ms(), sleep) # ms
+        self.send_msgs = send_msgs
+        self.wait_msg = wait_msg
+        self.processed = processed
+        return self
+    
+    def release(self):
+        self.code = 0
+        self.resume_at = 0
+        del self.send_msgs
+        self.send_msgs = []
+        self.processed = True
+        
+        
+class Task(object):
+    pool = []
+    id_count = 0
+
+    @classmethod
+    def init_pool(cls, size = 100):
+        for i in range(size):
+            cls.pool.append(Task(None, "", processed = True))
+
+    @classmethod
+    def get(cls):
+        for t in cls.pool:
+            if t.processed:
+                t.processed = False
+                return t
+            
+    @classmethod
+    def remain(cls):
+        n = 0
+        for t in cls.pool:
+            if t.processed:
+                n += 1
+        return n
+    
+    @classmethod
+    def new_id(cls):
+        cls.id_count += 1
+        return cls.id_count
+    
+    def __init__(self, func, name, condition = None, task_id = None, args = [], kwargs = {}, need_to_clean = [], reset_sys_path = False, processed = False):
+        self.load(func, name, condition, task_id, args, kwargs, need_to_clean, reset_sys_path, processed)
+
+    def load(self, func, name, condition = Condition(), task_id = None, args = [], kwargs = {}, need_to_clean = [], reset_sys_path = False, processed = False):
+        self.id = Task.new_id()
+        if task_id:
+            self.id = task_id
+        self.name = name
+        self.msgs = []
+        self.msgs_senders = []
+        self.func = func(self, name, *args, **kwargs) if func else None
+        self.condition = condition
+        self.need_to_clean = need_to_clean
+        self.reset_sys_path = reset_sys_path
+        self.processed = processed
+        self.cpu_time_ms = 0
+        self.cpu_usage = 0
+        return self
+        
+    def set_condition(self, condition):
+        self.condition.release()
+        self.condition = condition
+        
+    def put_message(self, message):
+        self.msgs.append(message)
+        self.msgs_senders.append(message.sender)
+        
+    def get_message(self, sender = None):
+        msg = None
+        if len(self.msgs) > 0:
+            if sender is None:
+                msg = self.msgs.pop(0)
+                _ = self.msgs_senders.pop(0)
+            else:
+                try:
+                    i = self.msgs_senders.index(sender)
+                    msg = self.msgs.pop(i)
+                    _ = self.msgs_senders.pop(i)
+                except:
+                    pass
+        return msg
+        
+    def ready(self):
+        if ticks_diff(ticks_ms(), self.condition.resume_at) >= 0:
+            if self.condition.wait_msg is True:
+                return len(self.msgs) > 0
+            elif self.condition.wait_msg >= 1:
+                return self.condition.wait_msg in self.msgs_senders
+            else:
+                return True
+        else:
+            return False
+        
+    def clean(self):
+        del self.name
+        for m in self.msgs:
+            m.release()
+        del self.msgs_senders
+        del self.func
+        if self.condition:
+            self.condition.release()
+        del self.need_to_clean
+        self.reset_sys_path = False
+        self.processed = True
+
+
+class Scheluder(object):
+    def __init__(self, log_to = None, name = "scheduler", cpu = 0):
+        self.log_to = const(log_to)
+        self.cpu = const(cpu)
+        self.name = const(name)
+        self.tasks = []
+        self.tasks_ids = {}
+        self.task_sort_at = 0
+        self.current = None
+        self.sleep_ms = 0
+        self.load_calc_at = ticks_us()
+        self.cpu_time_ms = 0
+        self.cpu_usage = 0
+        self.idle = 0
+        self.idle_sleep_interval = const(100)
+        self.task_sleep_interval = const(100)
+        self.need_to_sort = True
+        self.stop = False
+        
+    def task_sort(self, task):
+        if task.condition.wait_msg:
+            if len(task.msgs) > 0:
+                return -1000000
+            else:
+                return 1000000
+        return ticks_diff(task.condition.resume_at, self.task_sort_at)
+
+    def add_task(self, task):
+        self.tasks.append(task)
+        self.tasks_ids[task.id] = task
+        return task.id
+
+    def remove_task(self, task):
+        if task in self.tasks:
+            self.tasks.remove(task)
+        del self.tasks_ids[task.id]
+        
+    def exists_task(self, task_id):
+        return task_id in self.tasks_ids
+    
+    def get_task(self, task_id):
+        if task_id in self.tasks_ids:
+            return self.tasks_ids[task_id]
+        return None
+        
+    def send_msg(self, msg):
+        self.msgs.put(msg)
+        
+    def mem_free(self):
+        return gc.mem_free()
+    
+    def cpu_idle(self):
+        return self.idle
+    
+    def set_log_to(self, task_id):
+        self.log_to = task_id
+    
+    def log(self, head, e):
+        try:
+            if self.log_to:
+                buf = StringIO()
+                sys.print_exception(e, buf)
+                self.tasks_ids[self.log_to].put_message(Message.get().load({"output": head + buf.getvalue()}, sender = 0, sender_name = self.name))
+            else:
+               sys.print_exception(e)
+        except Exception as e:
+            sys.print_exception(e)
+
+    def run(self):
+        while not self.stop:
+            try:
+                load_interval = ticks_diff(ticks_us(), self.load_calc_at)
+                if load_interval >= 1000000:
+                    load_interval /= 1000
+                    self.idle = self.sleep_ms * 100 / load_interval
+                    if self.idle > 100:
+                        self.idle = 100
+                    tasks_cpu_time_ms = 0
+                    for t in self.tasks:
+                        tasks_cpu_time_ms += t.cpu_time_ms
+                        t.cpu_usage = t.cpu_time_ms * 100 / load_interval
+                        t.cpu_time_ms = 0
+                    self.cpu_time_ms = load_interval - tasks_cpu_time_ms - self.sleep_ms
+                    self.cpu_usage = self.cpu_time_ms * 100 / load_interval
+                    self.cpu_time_ms = 0
+                    self.sleep_ms = 0
+                    self.load_calc_at = ticks_us()
+                if self.tasks:
+                    #print(self.tasks)
+#                     s = ticks_us()
+                    if self.need_to_sort == True:
+                        self.task_sort_at = ticks_ms()
+                        self.tasks.sort(key = self.task_sort)
+                        self.need_to_sort = False
+#                         self.cpu_time_ms += ticks_diff(ticks_us(), s) / 1000
+                    if self.current is None:
+                        peek = self.tasks[0]
+#                         s = ticks_us()
+                        if peek.ready():
+                            # print("ready: %s" % peek.id)
+                            self.current = self.tasks.pop(0)
+                            try:
+                                task_start_at = ticks_us()
+#                                 self.cpu_time_ms += ticks_diff(task_start_at, s) / 1000
+                                self.current.set_condition(next(self.current.func))
+                                self.tasks.append(self.current)
+                                for msg in self.current.condition.send_msgs:
+                                    msg.sender = self.current.id
+                                    msg.sender_name = self.current.name
+                                    if msg.receiver in self.tasks_ids:
+                                        self.tasks_ids[msg.receiver].put_message(msg)
+                                self.current.cpu_time_ms = ticks_diff(ticks_us(), task_start_at) / 1000
+                                self.current = None
+                                self.need_to_sort = True
+                            except StopIteration:
+#                                 s = ticks_us()
+                                self.remove_task(self.current)
+                                cmd = self.current.name.split(" ")[0]
+                                same_cmd_tasks = 0
+                                for t in self.tasks:
+                                    if t.name.startswith(cmd):
+                                        same_cmd_tasks += 1
+                                # print("remain cmd: ", cmd, same_cmd_tasks)
+                                if same_cmd_tasks == 0:
+                                    # print("clean: ", self.current.need_to_clean)
+                                    for m in self.current.need_to_clean:
+                                        try:
+                                            m_name = m.__name__
+                                            exec("del %s" % m.__name__)
+                                            # exec("del %s" % m.__name__.split(".")[-1])
+                                            if hasattr(m, "main"):
+                                                del m.main
+                                            del sys.modules[m_name]
+                                            gc.collect()
+                                        except Exception as e:
+                                            h = "task: %s\n" % self.current.name
+                                            self.log(h, e)
+                                    if self.current.reset_sys_path:
+                                        try:
+                                            sys.path.pop(0)
+                                        except Exception as e:
+                                            h = "task: %s\n" % self.current.name
+                                            self.log(h, e)
+                                self.current.clean()
+                                # del self.current
+                                self.current = None
+#                                 self.cpu_time_ms += ticks_diff(ticks_us(), s) / 1000
+                            except TypeError:
+#                                 s = ticks_us()
+                                if self.current:
+                                    self.current.clean()
+                                    # del self.current
+                                self.current = None
+#                                 self.cpu_time_ms += ticks_diff(ticks_us(), s) / 1000
+                            except Exception as e:
+#                                 s = ticks_us()
+                                h = "task: %s\n" % self.current.name
+                                self.log(h, e)
+                                if self.current:
+                                    self.current.clean()
+                                    # del self.current
+                                self.current = None
+#                                 self.cpu_time_ms += ticks_diff(ticks_us(), s) / 1000
+                        else:
+                            sleep_us(self.task_sleep_interval)
+                            self.sleep_ms += self.task_sleep_interval / 1000
+                else:
+                    sleep_us(self.idle_sleep_interval)
+                    self.sleep_ms += self.idle_sleep_interval / 1000
+            except KeyboardInterrupt as e:
+                h = "scheduler exit: "
+                self.log(h, e)
+                break
+            except Exception as e:
+                h = "scheduler exit: "
+                self.log(h, e)
