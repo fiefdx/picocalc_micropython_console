@@ -242,6 +242,12 @@ class ChatShell(Shell):
             self.write_char("\n")
         self.cache_to_frame_history()
 
+    def get_using_ram_frame(self):
+        msg = "         Use RAM or not? [y/n]"
+        self.cursor_col = len(msg)
+        self.cursor_row = 2
+        return ["", "", msg, "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]
+
     def update_stats(self, d):
         self.stats = "[ C%3d%%|R%3d%%:%6.2fK|D %4dK|B[%s] %3d%%]" % (d[1], d[2], d[3] / 1024, d[6] / 1024, "C" if d[8] else "D", d[9])
 
@@ -269,6 +275,7 @@ def main(*args, **kwargs):
     name = args[1]
     shell = kwargs["shell"]
     shell_id = kwargs["shell_id"]
+    display_id = shell.display_id
     shell.disable_output = True
     try:
         model = "llama3.2"
@@ -283,6 +290,16 @@ def main(*args, **kwargs):
             stream = True if int(kwargs["args"][2]) == 1 else False
         s = ChatShell(display_size = (39, 28), host = host, port = port, model = model, stream = stream)
         shell.current_shell = s
+        yield Condition.get().load(sleep = 0, wait_msg = True, send_msgs = [
+            Message.get().load({"frame": s.get_using_ram_frame(), "cursor": s.get_cursor_position(1)}, receiver = display_id)
+        ])
+        msg = task.get_message()
+        c = msg.content["msg"]
+        msg.release()
+        if c == "y" or c == "Y" or c == "\n":
+            s.set_ram(True)
+        else:
+            s.set_ram(False)
         s.write_line("             Welcome to Chat")
         s.write_char("\n")
         yield Condition.get().load(sleep = 0, wait_msg = False, send_msgs = [
