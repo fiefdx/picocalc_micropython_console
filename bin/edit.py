@@ -7,14 +7,14 @@ import random
 from math import ceil
 from io import StringIO
 
-from listfile import ListFile
-from shell import Shell
-from scheduler import Condition, Message
-from ollama import Chat
-from common import exists, path_join, isfile, isdir, mkdirs, ClipBoard
-from display import Colors as C
-from analyzer import tokenize
-from analyzer import TOKEN_KEYWORD, TOKEN_IDENT, TOKEN_NUMBER, TOKEN_STRING, TOKEN_COMMENT, TOKEN_OP, TOKEN_WS
+from lib.listfile import ListFile
+from lib.shell import Shell
+from lib.scheduler import Condition, Message
+from lib.ollama import Chat
+from lib.common import exists, path_join, isfile, isdir, mkdirs, ClipBoard
+from lib.display import Colors as C
+from lib.analyzer import tokenize
+from lib.analyzer import TOKEN_KEYWORD, TOKEN_IDENT, TOKEN_NUMBER, TOKEN_STRING, TOKEN_COMMENT, TOKEN_OP, TOKEN_WS
 
 coroutine = True
 

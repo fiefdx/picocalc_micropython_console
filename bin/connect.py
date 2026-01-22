@@ -1,8 +1,8 @@
 import sys
 import time
 
-from wifi import WIFI
-from scheduler import Condition, Message
+from lib.wifi import WIFI
+from lib.scheduler import Condition, Message
 
 coroutine = True
 

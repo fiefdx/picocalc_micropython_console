@@ -2,8 +2,8 @@ import os
 import sys
 # import micropython
 
-from scheduler import Condition, Message
-from common import exists
+from lib.scheduler import Condition, Message
+from lib.common import exists
 
 coroutine = True
 

@@ -1,8 +1,8 @@
 import sys
 import uos
 
-from scheduler import Condition, Message
-from common import exists, path_join, isfile, isdir, path_split, mkdirs, copy, copyfile, copydir
+from lib.scheduler import Condition, Message
+from lib.common import exists, path_join, isfile, isdir, path_split, mkdirs, copy, copyfile, copydir
 
 coroutine = True
 

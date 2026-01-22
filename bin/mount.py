@@ -1,7 +1,7 @@
 import uos
 
-import sdcard
-from common import exists, path_join
+from lib import sdcard
+from lib.common import exists, path_join
 
 coroutine = False
 

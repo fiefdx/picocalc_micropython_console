@@ -3,9 +3,9 @@ import sys
 from math import ceil
 from io import StringIO
 
-from scheduler import Condition, Message
-from common import exists, path_join, get_size, path_split, mkdirs, rmtree, copy, Resource
-from display import Colors as C
+from lib.scheduler import Condition, Message
+from lib.common import exists, path_join, get_size, path_split, mkdirs, rmtree, copy, Resource
+from lib.display import Colors as C
 from bin.edit import EditShell
 
 coroutine = True

@@ -1,9 +1,9 @@
 import sys
 import uos
 
-from scheduler import Condition, Message
-from common import exists, path_join, isfile, isdir, path_split, mkdirs, copy, copyfile, copydir, abs_path
-from tea import CryptFile
+from lib.scheduler import Condition, Message
+from lib.common import exists, path_join, isfile, isdir, path_split, mkdirs, copy, copyfile, copydir, abs_path
+from lib.tea import CryptFile
 
 coroutine = True
 

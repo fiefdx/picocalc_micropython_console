@@ -1,6 +1,6 @@
 import uos
 
-from common import exists, path_join
+from lib.common import exists, path_join
 
 coroutine = False
 

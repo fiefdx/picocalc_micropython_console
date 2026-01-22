@@ -8,7 +8,7 @@ import time
 from time import ticks_diff, ticks_us, ticks_cpu, sleep_us
 import array
 
-from common import exists, path_join, Resource
+from lib.common import exists, path_join, Resource
 
 coroutine = False
 

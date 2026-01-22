@@ -1,8 +1,8 @@
 import sys
 from machine import Pin, I2C
 
-from scheduler import Condition, Message
-from common import exists, path_join, Time
+from lib.scheduler import Condition, Message
+from lib.common import exists, path_join, Time
 
 coroutine = True
 

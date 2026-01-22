@@ -7,10 +7,10 @@ from math import ceil, sqrt
 from io import StringIO
 from time import ticks_ms, ticks_diff
 
-from shell import Shell
-from scheduler import Condition, Message
-from common import exists, path_join, isfile, isdir, Resource
-from display import Colors as C
+from lib.shell import Shell
+from lib.scheduler import Condition, Message
+from lib.common import exists, path_join, isfile, isdir, Resource
+from lib.display import Colors as C
 
 coroutine = True
 

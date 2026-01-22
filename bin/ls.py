@@ -2,8 +2,8 @@ import os
 import sys
 from io import StringIO
 
-from scheduler import Condition, Message
-from common import exists, path_join, get_size
+from lib.scheduler import Condition, Message
+from lib.common import exists, path_join, get_size
 
 coroutine = True
 

@@ -2,7 +2,7 @@ import gc
 import sys
 # import micropython
 
-from scheduler import Condition, Message
+from lib.scheduler import Condition, Message
 
 coroutine = True
 

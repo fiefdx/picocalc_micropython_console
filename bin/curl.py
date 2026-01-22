@@ -3,7 +3,7 @@ import sys
 from io import StringIO
 import urequests
 
-from scheduler import Condition, Message
+from lib.scheduler import Condition, Message
 
 coroutine = True
 

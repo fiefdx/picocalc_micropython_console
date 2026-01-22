@@ -1,6 +1,6 @@
 import uos
 
-from common import exists, path_join, mkdirs
+from lib.common import exists, path_join, mkdirs
 
 coroutine = False
 

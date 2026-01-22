@@ -2,8 +2,8 @@ import gc
 import sys
 from machine import Pin, I2C
 
-from scheduler import Condition, Message
-from common import Resource
+from lib.scheduler import Condition, Message
+from lib.common import Resource
 
 coroutine = True
 

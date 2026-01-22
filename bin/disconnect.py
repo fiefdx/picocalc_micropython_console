@@ -1,5 +1,5 @@
 import time
-from wifi import WIFI
+from lib.wifi import WIFI
 
 coroutine = False
 

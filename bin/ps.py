@@ -1,4 +1,4 @@
-from scheduler import Condition, Task, Message
+from lib.scheduler import Condition, Task, Message
 
 coroutine = False
 

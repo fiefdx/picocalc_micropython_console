@@ -4,12 +4,12 @@ import time
 from math import ceil
 from io import StringIO
 
-from listfile import ListFile
-from shell import Shell
-from scheduler import Condition, Message
-from ollama import Chat
-from common import exists, path_join, isfile, isdir, mkdirs, path_split, Resource
-from display import Colors as C
+from lib.listfile import ListFile
+from lib.shell import Shell
+from lib.scheduler import Condition, Message
+from lib.ollama import Chat
+from lib.common import exists, path_join, isfile, isdir, mkdirs, path_split, Resource
+from lib.display import Colors as C
 
 coroutine = True
 

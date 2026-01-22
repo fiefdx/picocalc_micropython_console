@@ -3,8 +3,8 @@ import uos
 import time
 from math import ceil
 
-from scheduler import Condition, Message
-from common import exists, path_join, isfile, isdir
+from lib.scheduler import Condition, Message
+from lib.common import exists, path_join, isfile, isdir
 
 coroutine = True
 

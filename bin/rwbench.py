@@ -3,8 +3,8 @@ import sys
 import time
 # import micropython
 
-from scheduler import Condition, Message
-from common import exists, path_join, isfile, isdir, rmtree
+from lib.scheduler import Condition, Message
+from lib.common import exists, path_join, isfile, isdir, rmtree
 
 coroutine = True
 

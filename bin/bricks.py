@@ -6,9 +6,9 @@ import random
 from math import ceil
 from io import StringIO
 
-from shell import Shell
-from scheduler import Condition, Message
-from common import exists, path_join, isfile, isdir
+from lib.shell import Shell
+from lib.scheduler import Condition, Message
+from lib.common import exists, path_join, isfile, isdir
 
 coroutine = True
 

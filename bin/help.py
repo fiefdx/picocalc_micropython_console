@@ -1,4 +1,4 @@
-from scheduler import Condition, Message
+from lib.scheduler import Condition, Message
 
 coroutine = True
 

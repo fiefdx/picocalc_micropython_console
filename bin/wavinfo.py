@@ -1,4 +1,4 @@
-import wave
+from lib import wave
 
 coroutine = False
 

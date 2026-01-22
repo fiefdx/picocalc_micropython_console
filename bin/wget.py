@@ -3,8 +3,8 @@ import sys
 from io import StringIO
 import urequests
 
-from scheduler import Condition, Message
-from common import exists, path_join, isfile, isdir, Resource
+from lib.scheduler import Condition, Message
+from lib.common import exists, path_join, isfile, isdir, Resource
 
 coroutine = True
 

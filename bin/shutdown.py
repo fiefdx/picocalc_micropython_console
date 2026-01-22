@@ -1,9 +1,9 @@
 import sys
 from machine import Pin, I2C
 
-from scheduler import Condition, Message
-from common import exists, path_join
-from ds3231 import ds3231
+from lib.scheduler import Condition, Message
+from lib.common import exists, path_join
+from lib.ds3231 import ds3231
 
 coroutine = True
 

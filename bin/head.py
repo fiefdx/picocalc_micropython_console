@@ -1,8 +1,8 @@
 import sys
 import uos
 
-from scheduler import Condition, Message
-from common import exists, path_join
+from lib.scheduler import Condition, Message
+from lib.common import exists, path_join
 
 coroutine = True
 

@@ -2,9 +2,9 @@ import os
 import sys
 from io import StringIO
 
-from uping import ping
-from scheduler import Condition, Message
-from common import exists, path_join, get_size
+from lib.uping import ping
+from lib.scheduler import Condition, Message
+from lib.common import exists, path_join, get_size
 
 coroutine = True
 
