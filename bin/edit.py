@@ -72,7 +72,6 @@ class EditShell(object):
         if not exists(self.file_path):
             f = open(self.file_path, "w")
             f.close()
-        self.file = open(self.file_path, "r")
         self.status = "loading"
         self.mode = "edit"
         self.previous_mode = "edit"
@@ -295,6 +294,7 @@ class EditShell(object):
         
     def load_and_calc_total_lines(self):
         n = 0
+        self.file = open(self.file_path, "r")
         self.file.seek(0, 2)
         size = self.file.tell()
         yield 0
@@ -853,7 +853,6 @@ class EditShell(object):
             self.edit_history.append(op)
             
     def close(self):
-        self.file.close()
         self.cache.clear()
         self.edit_history.clear()
         self.edit_redo_cache.clear()
