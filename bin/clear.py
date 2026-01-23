@@ -1,11 +1,22 @@
-import uos
+import gc
 
-from lib.common import exists, path_join
+from lib.scheduler import Condition, Message
 
-coroutine = False
+coroutine = True
 
 
 def main(*args, **kwargs):
-    lines = [" "*42 for i in range(50)]
-    return "\n".join(lines)
-
+    task = args[0]
+    name = args[1]
+    shell_id = kwargs["shell_id"]
+    shell = kwargs["shell"]
+    try:
+        shell.clear_cache()
+        gc.collect()
+        yield Condition.get().load(sleep = 0, send_msgs = [
+            Message.get().load({"output": ""}, receiver = shell_id)
+        ])
+    except Exception as e:
+        yield Condition.get().load(sleep = 0, send_msgs = [
+            Message.get().load({"output": sys.print_exception(e)}, receiver = shell_id)
+        ])

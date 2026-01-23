@@ -86,6 +86,8 @@ class Shell(object):
     def help_commands(self):
         result = ""
         fs = uos.listdir("/bin")
+        fs.append("run")
+        fs.sort()
         line = ""
         for f in fs:
             if f not in ("__init__.py", ):
@@ -102,6 +104,11 @@ class Shell(object):
         elif result.endswith("\n"):
             result = result[:-1]
         return result
+
+    def clear_cache(self):
+        self.cache.clear()
+        # self.cache.append(self.prompt_c)
+        # self.current_col = 1
         
     def get_display_frame(self):
         data = {}
@@ -295,16 +302,17 @@ class Shell(object):
         self.cache_to_frame_history()
     
     def write_lines(self, lines, end = False):
-        lines = lines.split("\n")
-        for line in lines:
-            #if len(line) > 0:
-            line = line.replace("\r", "")
-            line = line.replace("\n", "")
-            self.cache.append(line)
-            if len(self.cache) > self.cache_lines:
-                self.cache.pop(0)
-            self.current_row = len(self.cache) - 1
-            self.current_col = len(self.cache[-1])
+        if lines != "":
+            lines = lines.split("\n")
+            for line in lines:
+                #if len(line) > 0:
+                line = line.replace("\r", "")
+                line = line.replace("\n", "")
+                self.cache.append(line)
+                if len(self.cache) > self.cache_lines:
+                    self.cache.pop(0)
+                self.current_row = len(self.cache) - 1
+                self.current_col = len(self.cache[-1])
         if end:
             self.write_char("\n")
         self.cache_to_frame_history()
