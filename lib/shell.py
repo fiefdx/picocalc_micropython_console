@@ -10,7 +10,7 @@ from .display import Colors as C
 
 
 class Shell(object):
-    def __init__(self, display_size = (20, 8), cache_size = (-1, 50), history_length = 100, prompt_c = ">", scheduler = None, display_id = None, storage_id = None, history_file_path = "/.history", bin_path = "/bin"):
+    def __init__(self, display_size = (20, 8), cache_size = (-1, 50), history_length = 100, prompt_c = ">", scheduler = None, display_id = None, storage_id = None, history_file_path = "/.history", bin_path = "/bin", shell_id = 0):
         self.display_width = const(display_size[0])
         self.display_height = const(display_size[1])
         self.display_width_with_prompt = const(display_size[0] + len(prompt_c))
@@ -40,6 +40,7 @@ class Shell(object):
         self.bin_path = const(bin_path)
         self.stats = ""
         self.loading = True
+        self.shell_id = shell_id
         self.load_history()
     
     def load_history(self):
@@ -363,6 +364,7 @@ class Shell(object):
                 self.session_task_id = self.scheduler.add_task(
                     Task.get().load(sys.modules[module].main, cmd, condition = Condition.get(), kwargs = {"args": args[1:],
                                                                                                "shell_id": self.scheduler.current_shell_id,
+                                                                                               "shell_obj_id": self.shell_id,
                                                                                                "shell": self}, need_to_clean = [sys.modules[module]])
                 ) # execute cmd
             else:
@@ -389,6 +391,7 @@ class Shell(object):
                     self.session_task_id = self.scheduler.add_task(
                         Task.get().load(sys.modules[module].main, cmd, condition = Condition.get(), kwargs = {"args": args[1:],
                                                                                                    "shell_id": self.scheduler.current_shell_id,
+                                                                                                   "shell_obj_id": self.shell_id,
                                                                                                    "shell": self}, need_to_clean = [sys.modules[module]], reset_sys_path = True)
                     ) # execute cmd
                 else:
