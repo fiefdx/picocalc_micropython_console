@@ -107,6 +107,15 @@ class PyShell(Shell):
                 if cmd == "quit()":
                     self.exit = True
                     uos.dupterm(None)
+                    self.cache.clear()
+                    self.frame_history.clear()
+                    self.history.clear()
+                elif cmd == "clear()":
+                    self.cache.clear()
+                    self.frame_history.clear()
+                    self.cache.append(self.prompt_c)
+                    self.current_row = len(self.cache) - 1
+                    self.current_col = len(self.cache[-1])
                 else:
                     if "=" in cmd or "for" in cmd or "import" in cmd or "from" in cmd or "if" in cmd:
                         try:
@@ -265,6 +274,10 @@ def main(*args, **kwargs):
             shell.disable_output = False
             shell.current_shell = None
             shell.loading = True
+            s.cache = None
+            s.history = None
+            s.frame_history = None
+            del s
             yield Condition.get().load(sleep = 0, wait_msg = False, send_msgs = [
                 Message.get().load({"output": "quit from python"}, receiver = shell_id)
             ])

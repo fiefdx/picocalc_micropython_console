@@ -107,6 +107,7 @@ class Shell(object):
 
     def clear_cache(self):
         self.cache.clear()
+        self.frame_history.clear()
         # self.cache.append(self.prompt_c)
         # self.current_col = 1
         
