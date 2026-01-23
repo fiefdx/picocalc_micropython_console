@@ -4,7 +4,7 @@ import time
 from math import ceil
 
 from lib.scheduler import Condition, Message
-from lib.common import exists, path_join, isfile, isdir
+from lib.common import exists, path_join, isfile, isdir, abs_path
 
 coroutine = True
 
@@ -16,13 +16,13 @@ def main(*args, **kwargs):
     shell = kwargs["shell"]
     shell_id = kwargs["shell_id"]
     shell.enable_cursor = False
-    width, height = 42, 17
+    width, height = 40, 27
     try:
         pages = []
         frame = []
         read_exit = False
         if len(kwargs["args"]) > 0:
-            path = kwargs["args"][0]
+            path = abs_path(kwargs["args"][0])
             #print("read path: ", path)
             if exists(path) and isfile(path):
                 fp = open(path, "r")

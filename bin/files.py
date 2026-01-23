@@ -4,7 +4,7 @@ from math import ceil
 from io import StringIO
 
 from lib.scheduler import Condition, Message
-from lib.common import exists, path_join, get_size, path_split, mkdirs, rmtree, copy, Resource
+from lib.common import exists, path_join, get_size, path_split, mkdirs, rmtree, copy, Resource, getcwd, abs_path
 from lib.display import Colors as C
 from bin.edit import EditShell
 
@@ -486,9 +486,9 @@ def main(*args, **kwargs):
         # yield Condition.get().load(sleep = 0, send_msgs = [
         #     Message.get().load({"enabled": False}, receiver = cursor_id)
         # ])
-        path = os.getcwd()
+        path = getcwd()
         if len(kwargs["args"]) > 0:
-            path = kwargs["args"][0]
+            path = abs_path(kwargs["args"][0])
         if len(path) > 1 and path.endswith("/"):
             path = path[:-1]
         if exists(path):

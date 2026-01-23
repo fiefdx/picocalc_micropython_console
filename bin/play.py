@@ -8,7 +8,7 @@ import time
 from time import ticks_diff, ticks_us, ticks_cpu, sleep_us
 import array
 
-from lib.common import exists, path_join, Resource
+from lib.common import exists, path_join, Resource, abs_path
 
 coroutine = False
 
@@ -17,7 +17,7 @@ def main(*args, **kwargs):
     result = "invalid parameters"
     try:
         if len(args) > 0:
-            path = args[0]
+            path = abs_path(args[0])
             if exists(path) and path.lower().endswith(".wav"):
                 left_pin = Pin(26)
                 right_pin = Pin(27)

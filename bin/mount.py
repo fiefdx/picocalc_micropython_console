@@ -1,7 +1,7 @@
 import uos
 
 from lib import sdcard
-from lib.common import exists, path_join
+from lib.common import exists, path_join, abs_path
 
 coroutine = False
 
@@ -13,11 +13,11 @@ def main(*args, **kwargs):
     spi = kwargs["spi"]
     sd_cs = kwargs["sd_cs"]
     if len(args) > 0:
-        path = args[0]
+        path = abs_path(args[0])
         if len(path) > 1 and path.endswith("/"):
             path = path[:-1]
         sd = sdcard.SDCard(spi, sd_cs, baudrate=13200000)
         vfs = uos.VfsFat(sd)
-        uos.mount(vfs, "/sd")
+        uos.mount(vfs, path)
         result = "success"
     return result, sd, vfs

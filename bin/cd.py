@@ -1,16 +1,17 @@
 import uos
 
-from lib.common import exists, path_join
+from lib.common import exists, path_join, chdir, abs_path
 
 coroutine = False
 
 
 def main(*args, **kwargs):
     result = "path invalid"
-    path = "/sd"
+    path = "/"
     if len(args) > 0:
         path = args[0]
-    if exists(path) and uos.stat(path)[0] == 16384:
-        uos.chdir(path)
+    apath = abs_path(path)
+    if exists(apath) and uos.stat(apath)[0] == 16384:
+        chdir(apath)
         result = path
     return result

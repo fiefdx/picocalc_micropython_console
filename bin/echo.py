@@ -1,6 +1,6 @@
 import uos
 
-from lib.common import exists, path_join
+from lib.common import exists, path_join, abs_path
 
 coroutine = False
 
@@ -17,7 +17,7 @@ def main(*args, **kwargs):
             elif content.startswith('"') and content.endswith('"'):
                 content = content[1:-1]
             path = path.strip()
-            with open(path, "a") as fp:
+            with open(abs_path(path), "a") as fp:
                 fp.write(content)
             result = path
         elif ">" in data:
@@ -28,7 +28,7 @@ def main(*args, **kwargs):
             elif content.startswith('"') and content.endswith('"'):
                 content = content[1:-1]
             path = path.strip()
-            with open(path, "w") as fp:
+            with open(abs_path(path), "w") as fp:
                 fp.write(content)
             result = path
     return result

@@ -4,7 +4,7 @@ from io import StringIO
 import urequests
 
 from lib.scheduler import Condition, Message
-from lib.common import exists, path_join, isfile, isdir, Resource
+from lib.common import exists, path_join, isfile, isdir, Resource, abs_path
 
 coroutine = True
 
@@ -30,7 +30,7 @@ def main(*args, **kwargs):
     else:
         filename = url.split("/")[-1].split("?")[0]
     try:
-        fp = open(filename, "wt")
+        fp = open(abs_path(filename), "wt")
         r = urequests.get(url).raw
         total = 0
         n = 0

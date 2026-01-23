@@ -2,7 +2,7 @@ import sys
 import uos
 
 from lib.scheduler import Condition, Message
-from lib.common import exists, path_join
+from lib.common import exists, path_join, abs_path
 
 coroutine = True
 
@@ -15,7 +15,7 @@ def main(*args, **kwargs):
     shell_id = kwargs["shell_id"]
     try:
         if len(args) > 0:
-            path = args[0]
+            path = abs_path(args[0])
             lines = 5
             if len(args) > 1:
                 lines = int(args[1])

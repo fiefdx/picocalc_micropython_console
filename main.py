@@ -198,7 +198,7 @@ def display(task, name, scheduler = None):
         line_height = 11
         
         frame_previous = None
-        clear_line = const("                                                     ")
+        # clear_line = const("                                                     ")
         cursor_previous = None
         while True:
             yield Condition.get().load(sleep = 0, wait_msg = True)
@@ -607,6 +607,38 @@ def sound_output(task, name, scheduler = None):
             msg.release()
         except Exception as e:
             print(e)
+            
+            
+def memory_dump(task, name, scheduler = None, interval = 5000):
+    import io
+    import micropython
+    yield Condition.get().load(sleep = 500)
+    first = True
+    with open("/sd/mem_dump.txt", "w") as f:
+        pass
+    while True:
+        try:
+            yield Condition.get().load(sleep = interval, wait_msg = False)
+            with open("/sd/mem_dump.txt", "a+") as f:
+                if first:
+                    # Print ticks_ms/RTC synchronisation values, and do initial memory dump.
+                    # Unix supplies an extra - ninth - item (for dst). Restrict to 8
+                    # elements.
+                    f.write(f"@@@ {time.ticks_ms()} {time.localtime()[:8]}\n")
+                    first = False
+                f.write(f"@@@ {time.ticks_ms()}\n")
+                buf = io.StringIO()
+                os.dupterm(buf)
+                micropython.mem_info(1)
+                os.dupterm(None)
+                buf.seek(0)
+                line = buf.readline()
+                while line:
+                    f.write(line)
+                    line = buf.readline()
+                f.write("@@@\n")
+        except Exception as e:
+            print(e)
 
 
 if __name__ == "__main__":
@@ -630,6 +662,7 @@ if __name__ == "__main__":
         cursor_id = s.add_task(Task.get().load(cursor, "cursor", condition = Condition.get(), kwargs = {"interval": 500, "scheduler": s, "display_id": display_id, "storage_id": storage_id}))
         s.cursor_id = cursor_id
         keyboard_id = s.add_task(Task.get().load(keyboard_input, "keyboard_input", condition = Condition.get(), kwargs = {"scheduler": s, "interval": 50, "display_id": display_id}))
+        # memory_dump_id = s.add_task(Task.get().load(memory_dump, "memory_dump", condition = Condition.get(), kwargs = {"scheduler": s, "interval": 5000}))
         settings.led.on()
         # settings.led.off()
         s.run()

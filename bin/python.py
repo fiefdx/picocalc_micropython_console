@@ -6,7 +6,7 @@ from io import StringIO
 
 from lib.shell import Shell
 from lib.scheduler import Condition, Message
-from lib.common import exists, path_join, isfile, isdir, path_split, Resource
+from lib.common import exists, path_join, isfile, isdir, path_split, Resource, abs_path
 from lib.display import Colors as C
 
 coroutine = True
@@ -223,7 +223,7 @@ def main(*args, **kwargs):
     shell.disable_output = True
     try:
         if len(kwargs["args"]) > 0:
-            file_path = kwargs["args"][0]
+            file_path = abs_path(kwargs["args"][0])
             result = []
             if exists(file_path):
                 with open(file_path, "r") as fp:

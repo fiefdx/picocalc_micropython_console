@@ -2,7 +2,7 @@ import sys
 import uos
 
 from lib.scheduler import Condition, Message
-from lib.common import exists, path_join
+from lib.common import exists, path_join, abs_path
 
 coroutine = True
 
@@ -15,7 +15,7 @@ def main(*args, **kwargs):
     shell_id = kwargs["shell_id"]
     try:
         if len(args) > 0:
-            path = args[0]
+            path = abs_path(args[0])
             if exists(path):
                 n = 0
                 page_size = 18

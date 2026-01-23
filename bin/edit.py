@@ -11,7 +11,7 @@ from lib.listfile import ListFile
 from lib.shell import Shell
 from lib.scheduler import Condition, Message
 from lib.ollama import Chat
-from lib.common import exists, path_join, isfile, isdir, mkdirs, ClipBoard
+from lib.common import exists, path_join, isfile, isdir, mkdirs, ClipBoard, abs_path
 from lib.display import Colors as C
 from lib.analyzer import tokenize
 from lib.analyzer import TOKEN_KEYWORD, TOKEN_IDENT, TOKEN_NUMBER, TOKEN_STRING, TOKEN_COMMENT, TOKEN_OP, TOKEN_WS
@@ -871,7 +871,7 @@ def main(*args, **kwargs):
     width, height = 40, 29
     try:
         if len(kwargs["args"]) > 0:
-            file_path = kwargs["args"][0]
+            file_path = abs_path(kwargs["args"][0])
             ram = True
             if len(kwargs["args"]) > 1:
                 ram = int(kwargs["args"][1]) == 1

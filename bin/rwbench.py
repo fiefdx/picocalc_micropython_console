@@ -4,7 +4,7 @@ import time
 # import micropython
 
 from lib.scheduler import Condition, Message
-from lib.common import exists, path_join, isfile, isdir, rmtree
+from lib.common import exists, path_join, isfile, isdir, rmtree, abs_path
 
 coroutine = True
 
@@ -17,7 +17,7 @@ def main(*args, **kwargs):
         buffer_size = 512 # 512-byte blocks for writing/reading
         result = "invalid parameters"
         if len(args) > 0:
-            target_path = args[0]
+            target_path = abs_path(args[0])
             if exists(target_path) and isfile(target_path):
                 os.remove(target_path)
             start_time = time.ticks_ms()

@@ -3,7 +3,7 @@ import sys
 from io import StringIO
 
 from lib.scheduler import Condition, Message
-from lib.common import exists, path_join, get_size
+from lib.common import exists, path_join, get_size, getcwd, abs_path
 
 coroutine = True
 
@@ -15,9 +15,9 @@ def main(*args, **kwargs):
     shell_id = kwargs["shell_id"]
     files_total = 0
     dirs_total = 0
-    path = os.getcwd()
+    path = getcwd()
     if len(kwargs["args"]) > 0:
-        path = kwargs["args"][0]
+        path = abs_path(kwargs["args"][0])
     if len(path) > 1 and path.endswith("/"):
         path = path[:-1]
     try:

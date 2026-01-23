@@ -16,6 +16,7 @@ from .ntp import get_ntp_time
 _TICKS_PERIOD = const(1<<29)
 _TICKS_MAX = const(_TICKS_PERIOD-1)
 _TICKS_HALFPERIOD = const(_TICKS_PERIOD//2)
+_PATH = "/"
 
 
 def ticks_ms():
@@ -46,6 +47,15 @@ def ticks_less(ticks1, ticks2):
     return ticks_diff(ticks1, ticks2) < 0
 
 
+def getcwd():
+    return _PATH
+
+
+def chdir(p):
+    global _PATH
+    _PATH = p
+
+
 def exists(path):
     r = False
     try:
@@ -59,7 +69,9 @@ def exists(path):
 def abs_path(path):
     if path.startswith("/"):
         return path
-    cwd = uos.getcwd()
+    if path.startswith("./"):
+        path = path[2:]
+    cwd = _PATH
     if cwd == "/":
         return "/" + path
     return cwd + "/" + path

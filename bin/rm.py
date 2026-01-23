@@ -2,7 +2,7 @@ import sys
 import uos
 
 from lib.scheduler import Condition, Message
-from lib.common import exists, path_join, isfile, isdir, path_split, mkdirs, copy, copyfile, copydir, rmtree
+from lib.common import exists, path_join, isfile, isdir, path_split, mkdirs, copy, copyfile, copydir, rmtree, abs_path
 
 coroutine = True
 
@@ -16,10 +16,7 @@ def main(*args, **kwargs):
     canceled = False
     try:
         if len(args) == 1:
-            t_path = args[0]
-            cwd = uos.getcwd()
-            if t_path.startswith("."):
-                t_path = cwd + t_path[1:]
+            t_path = abs_path(args[0])
             n = 1
             for output in rmtree(t_path):
                 yield Condition.get().load(sleep = 0, send_msgs = [
