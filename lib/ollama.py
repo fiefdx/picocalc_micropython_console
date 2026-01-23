@@ -177,6 +177,9 @@ class Chat(object):
         self.stream = stream
         self.context_length = context_length
         self.data = ChatData(cache_file, self.model, self.stream)
+        self.content = bytearray()
+        self.role = bytearray()
+        self.name = bytearray()
         self.headers = {"Content-Type": "application/json"}
         
     def change_cache_file(self, cache_file):
@@ -190,7 +193,6 @@ class Chat(object):
             mark = '"name":"'
             mark_i = 0
             status = "end"
-            name = bytearray()
             for c in r.iter_chars():
                 if status == "end":
                     if c == ord(mark[0]):
@@ -206,12 +208,14 @@ class Chat(object):
                 elif status == "name_start":
                     if c == ord('"'):
                         status = "end"
-                        models.append(name.decode())
-                        name = bytearray()
+                        models.append(self.name.decode())
+                        self.name[:] = b''
                     else:
-                        name.append(c)
+                        self.name.append(c)
+            r.close()
             return True, models
         else:
+            r.close()
             return False, r.reason
         
     def chat(self, message):
@@ -225,6 +229,7 @@ class Chat(object):
                 while line:
                     result += line
                     line = r.raw.readline()
+                r.close()
                 return True, result
             else:
                 mark_role = 'role":"'
@@ -235,8 +240,6 @@ class Chat(object):
 
                 last_c = ''
                 status = "end"
-                content = bytearray()
-                role = bytearray()
                 for c in r.iter_chars():
                     if status == "end":
                         if c == ord(mark_role[0]):
@@ -263,18 +266,25 @@ class Chat(object):
                         if c == ord('"') and last_c != ord(mark_escape):
                             status = "end"
                         else:
-                            role.append(c)
+                            self.role.append(c)
                             last_c = c
                     elif status == "content_start":
                         if c == ord('"') and last_c != ord(mark_escape):
                             status = "end"
                         else:
-                            content.append(c)
+                            self.content.append(c)
                             last_c = c
-                self.data.append_message(b'{"role": "%s", "content": "%s"}' % (role.decode(), content.decode()))
-                return True, json_to_string(content.decode())# json.loads(b'["%s"]' % content.decode())[0]
+                content = self.content.decode()
+                self.data.append_message(b'{"role": "%s", "content": "%s"}' % (self.role.decode(), content))
+                self.content[:] = b''
+                self.role[:] = b''
+                r.close()
+                return True, json_to_string(content)# json.loads(b'["%s"]' % content.decode())[0]
         else:
+            r.close()
             return False, r.reason
 
     def clear(self):
         self.data.clear()
+        self.content[:] = b''
+        self.role[:] = b''
