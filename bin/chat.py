@@ -57,7 +57,7 @@ class ChatShell(Shell):
         self.cursor_col = 0
         self.history_idx = 0
         self.scroll_row = 0
-        self.frame_history = []
+        self.frame_history = [] if ram else ListFile(path_join(self.cache_path, "chat_history_cache.%d.txt" % self.id), shrink_threshold = 1024000) # []
         self.session_task_id = None
         self.exit = False
         self.current_shell = None
@@ -76,6 +76,7 @@ class ChatShell(Shell):
 
     def set_ram(self, ram):
         self.cache = [] if ram else ListFile(path_join(self.cache_path, "chat_cache.%d.txt" % self.id), shrink_threshold = 1024000) # []
+        self.frame_history = [] if ram else ListFile(path_join(self.cache_path, "chat_history_cache.%d.txt" % self.id), shrink_threshold = 1024000) # []
     
     def load_history(self):
         if exists(self.history_file_path):
@@ -121,6 +122,12 @@ class ChatShell(Shell):
                     self.write_history(self.cache[-1][len(self.prompt_c):])
                     if cmd == "exit" or cmd == "quit":
                         self.exit = True
+                    elif cmd == "clear":
+                        self.cache.clear()
+                        self.frame_history.clear()
+                        self.cache.append(self.prompt_c)
+                        self.current_row = len(self.cache) - 1
+                        self.current_col = len(self.cache[-1])
                     elif cmd == "new":
                         if self.chat_log is not None:
                             self.chat_log.close()
@@ -326,6 +333,10 @@ def main(*args, **kwargs):
         shell.disable_output = False
         shell.current_shell = None
         shell.loading = True
+        s.cache = None
+        s.history = None
+        s.frame_history = None
+        del s
         yield Condition.get().load(sleep = 0, wait_msg = False, send_msgs = [
             Message.get().load({"output": "quit from chat"}, receiver = shell_id)
         ])
