@@ -15,27 +15,13 @@ coroutine = True
 
 
 class ChatShell(Shell):
-    IDS = { # as many as 4 editors can be opened
-        0: False,
-        1: False,
-        2: False,
-        3: False,
-    }
-
-    @classmethod
-    def get_id(cls):
-        for i in range(4):
-            if cls.IDS[i] is False:
-                cls.IDS[i] = True
-                return i
-
-    def __init__(self, display_size = (19, 9), cache_size = (-1, 100), history_length = 100, host = "", port = 11434, model = "llama:3.2", stream = False, prompt_c = ">", scheduler = None, display_id = None, storage_id = None, history_file_path = "/.chat_history", ram = True):
+    def __init__(self, display_size = (19, 9), cache_size = (-1, 100), history_length = 100, host = "", port = 11434, model = "llama:3.2", stream = False, prompt_c = ">", scheduler = None, display_id = None, storage_id = None, history_file_path = "/.chat_history", ram = True, chat_id = 0):
         self.display_width = display_size[0]
         self.display_height = display_size[1]
         self.display_width_with_prompt = display_size[0] + len(prompt_c)
         self.history_length = history_length
         self.prompt_c = prompt_c
-        self.id = ChatShell.get_id()
+        self.id = chat_id
         if not exists("/.cache"):
             mkdirs("/.cache")
         self.cache_path = "/.cache"
@@ -46,7 +32,7 @@ class ChatShell(Shell):
         self.history = []
         self.cache_width = cache_size[0]
         self.cache_lines = cache_size[1]
-        self.cache = [] if ram else ListFile(path_join(self.cache_path, "chat_cache.%d.txt" % self.id), shrink_threshold = 1024000) # []
+        self.cache = []
         self.cursor_color = 1
         self.current_row = 0
         self.current_col = 0
@@ -57,7 +43,7 @@ class ChatShell(Shell):
         self.cursor_col = 0
         self.history_idx = 0
         self.scroll_row = 0
-        self.frame_history = [] if ram else ListFile(path_join(self.cache_path, "chat_history_cache.%d.txt" % self.id), shrink_threshold = 1024000) # []
+        self.frame_history = []
         self.session_task_id = None
         self.exit = False
         self.current_shell = None
@@ -273,7 +259,6 @@ class ChatShell(Shell):
 
     def close(self):
         self.cache.clear()
-        ChatShell.IDS[self.id] = False
         del self.cache
 
 
@@ -282,6 +267,7 @@ def main(*args, **kwargs):
     name = args[1]
     shell = kwargs["shell"]
     shell_id = kwargs["shell_id"]
+    shell_obj_id = kwargs["shell_obj_id"]
     display_id = shell.display_id
     shell.disable_output = True
     try:
@@ -295,7 +281,7 @@ def main(*args, **kwargs):
             port = kwargs["args"][1]
         if len(kwargs["args"]) > 2:
             stream = True if int(kwargs["args"][2]) == 1 else False
-        s = ChatShell(display_size = (39, 28), host = host, port = port, model = model, stream = stream)
+        s = ChatShell(display_size = (39, 28), host = host, port = port, model = model, stream = stream, chat_id = shell_obj_id)
         shell.current_shell = s
         yield Condition.get().load(sleep = 0, wait_msg = True, send_msgs = [
             Message.get().load({"frame": s.get_using_ram_frame(), "cursor": s.get_cursor_position(1)}, receiver = display_id)
