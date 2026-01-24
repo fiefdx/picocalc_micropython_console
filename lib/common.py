@@ -85,14 +85,17 @@ def path_join(*args):
         p = p.strip("/")
         if p.startswith(".."):
             path = "/".join(path.split("/")[:-1])
-            path += "/" + p[2:]
+            if p[2:].startswith("/"):
+                path += p[2:]
+            else:
+                path += "/" + p[2:]
+        elif p.startswith("./"):
+            path += p[1:]
         else:
             path += "/" + p
     if args[-1].endswith("/"):
         if not path.endswith("/"):
             path += "/"
-    #if not path.startswith("/"):
-    #    path = "/" + path
     return path
 
 
@@ -115,6 +118,8 @@ def path_split(path):
 
 
 def mkdirs(path):
+    if len(path) > 1 and path.endswith("/"):
+        path = path[:-1]
     root, _ = path_split(path)
     if not exists(root):
         mkdirs(root)
