@@ -10,7 +10,7 @@ from .display import Colors as C
 
 
 class Shell(object):
-    def __init__(self, display_size = (20, 8), cache_size = (-1, 50), history_length = 100, prompt_c = ">", scheduler = None, display_id = None, storage_id = None, history_file_path = "/.history", bin_path = "/bin", shell_id = 0):
+    def __init__(self, display_size = (20, 8), cache_size = (-1, 50), history_length = 100, prompt_c = ">", scheduler = None, display_id = None, storage_id = None, history_file_path = "/.cache/.history", bin_path = "/bin", shell_id = 0):
         self.display_width = const(display_size[0])
         self.display_height = const(display_size[1])
         self.display_width_with_prompt = const(display_size[0] + len(prompt_c))

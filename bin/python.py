@@ -13,7 +13,7 @@ coroutine = True
 
 
 class PyShell(Shell):
-    def __init__(self, display_size = (19, 9), cache_size = (-1, 50), history_length = 50, prompt_c = ">>>", scheduler = None, display_id = None, storage_id = None, history_file_path = "/.python_history"):
+    def __init__(self, display_size = (19, 9), cache_size = (-1, 50), history_length = 50, prompt_c = ">>>", scheduler = None, display_id = None, storage_id = None, history_file_path = "/.cache/.python_history"):
         self.display_width = display_size[0]
         self.display_height = display_size[1]
         self.display_width_with_prompt = display_size[0] + len(prompt_c)

@@ -223,7 +223,7 @@ class Resource(object):
     
 
 class ClipBoard(object):
-    path = "/clipboard.cache"
+    path = "/.cache/clipboard.cache"
 
     @classmethod
     def set(cls, content):

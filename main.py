@@ -30,7 +30,7 @@ from lib import sdcard
 # import font7
 from lib.display import ILI9488, Colors as C
 from lib.scheduler import Scheluder, Condition, Task, Message
-from lib.common import Resource, Time
+from lib.common import Resource, Time, exists, mkdirs
 from lib.shell import Shell
 from lib.keyboard import Keyboard
 import settings_pico2 as settings
@@ -649,6 +649,8 @@ if __name__ == "__main__":
             i2c = SoftI2C(scl = settings.rtc_scl, sda = settings.rtc_sda)
             Time.rtc = DS1307(i2c)
             Time.sync_machine_rtc()
+        if not exists("/.cache"):
+            mkdirs("/.cache")
         s = Scheluder(cpu = 0)
         display_id = s.add_task(Task.get().load(display, "display", condition = Condition.get(), kwargs = {"scheduler": s}))
         monitor_id = s.add_task(Task.get().load(monitor, "monitor", condition = Condition.get(), kwargs = {"scheduler": s, "display_id": display_id}))
