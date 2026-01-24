@@ -649,6 +649,7 @@ if __name__ == "__main__":
             i2c = SoftI2C(scl = settings.rtc_scl, sda = settings.rtc_sda)
             Time.rtc = DS1307(i2c)
             Time.sync_machine_rtc()
+        Time.start_at = time.time()
         if not exists("/.cache"):
             mkdirs("/.cache")
         s = Scheluder(cpu = 0)

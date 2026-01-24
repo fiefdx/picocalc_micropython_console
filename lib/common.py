@@ -257,6 +257,7 @@ class Time(object):
     days  = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
     rtc = None
     machine_rtc = RTC()
+    start_at = 0
     
     @classmethod
     def now(cls):
