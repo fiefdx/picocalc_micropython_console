@@ -25,6 +25,9 @@ sd_baudrate = const(80_000_000)
 pwm_left = Pin(6)
 pwm_right = Pin(7)
 
+rtc_scl = Pin(41)
+rtc_sda = Pin(8)
+
 class led(object):
     np = neopixel.NeoPixel(Pin(9), 1)
     

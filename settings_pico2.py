@@ -24,4 +24,7 @@ sd_baudrate = const(31_250_000)
 pwm_left = Pin(26)
 pwm_right = Pin(27)
 
+rtc_scl = Pin(21)
+rtc_sda = Pin(28)
+
 led = Pin("LED", Pin.OUT)
