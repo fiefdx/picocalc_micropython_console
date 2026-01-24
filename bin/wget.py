@@ -1,7 +1,7 @@
 import os
 import sys
 from io import StringIO
-import urequests
+from lib import request as urequests
 
 from lib.scheduler import Condition, Message
 from lib.common import exists, path_join, isfile, isdir, Resource, abs_path
