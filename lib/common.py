@@ -108,7 +108,10 @@ def path_split(path):
     parts = path.split("/")
     #if path.startswith("/"):
     #    parts[0] = "/"
-    return "/".join(parts[:-1]), parts[-1]
+    dir_path, name = "/".join(parts[:-1]), parts[-1]
+    if dir_path == "":
+        dir_path = "/"
+    return dir_path, name
 
 
 def mkdirs(path):
