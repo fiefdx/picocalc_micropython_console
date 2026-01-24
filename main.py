@@ -642,8 +642,8 @@ def sound_output(task, name, scheduler = None):
 if __name__ == "__main__":
     try:
         Message.init_pool(25)
-        Condition.init_pool(15)
-        Task.init_pool(15)
+        Condition.init_pool(20)
+        Task.init_pool(20)
         if hasattr(settings, "rtc_sda"):
             from lib.urtc import DS1307
             i2c = SoftI2C(scl = settings.rtc_scl, sda = settings.rtc_sda)
