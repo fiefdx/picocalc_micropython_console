@@ -648,6 +648,7 @@ if __name__ == "__main__":
             from lib.urtc import DS1307
             i2c = SoftI2C(scl = settings.rtc_scl, sda = settings.rtc_sda)
             Time.rtc = DS1307(i2c)
+            Time.sync_machine_rtc()
         s = Scheluder(cpu = 0)
         display_id = s.add_task(Task.get().load(display, "display", condition = Condition.get(), kwargs = {"scheduler": s}))
         monitor_id = s.add_task(Task.get().load(monitor, "monitor", condition = Condition.get(), kwargs = {"scheduler": s, "display_id": display_id}))

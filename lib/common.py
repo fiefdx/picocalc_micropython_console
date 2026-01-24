@@ -245,18 +245,33 @@ class ClipBoard(object):
 
 class Time(object):
     days  = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-    rtc = RTC()
+    rtc = None
+    machine_rtc = RTC()
     
     @classmethod
     def now(cls):
-        now = cls.rtc.datetime()
+        now = cls.machine_rtc.datetime()
+        if cls.rtc:
+            now = cls.rtc.datetime()
         return "%04d-%02d-%02d %02d:%02d:%02d %s" % (now[0], now[1], now[2], now[4], now[5], now[6], cls.days[now[3]])
     
     @classmethod
     def sync(cls):
         try:
             n = get_ntp_time()
-            cls.rtc.datetime((n[0], n[1], n[2], n[6], n[3], n[4], n[5], n[7]))
+            cls.machine_rtc.datetime((n[0], n[1], n[2], n[6], n[3], n[4], n[5], n[7]))
+            if cls.rtc:
+                cls.rtc.datetime((n[0], n[1], n[2], n[6], n[3], n[4], n[5], n[7]))
+        except:
+            return False
+        return True
+
+    @classmethod
+    def sync_machine_rtc(cls):
+        try:            
+            if cls.rtc:
+                n = cls.rtc.datetime()
+                cls.machine_rtc.datetime((n[0], n[1], n[2], n[6], n[3], n[4], n[5], n[7]))
         except:
             return False
         return True
