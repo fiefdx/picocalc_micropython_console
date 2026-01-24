@@ -1,5 +1,7 @@
+import gc
 import usocket
 import ssl
+
 
 class Response:
 
@@ -44,88 +46,112 @@ class Response:
         while n > 0:
             for c in buf[:n]:
                 yield c
-            n = self.raw.readinto(buf)        
+            n = self.raw.readinto(buf)
 
 
-def request(method, url, data=None, json=None, headers={}, stream=None, cache_path="/", cache_file="/request.cache"):
-    try:
-        proto, dummy, host, path = url.split("/", 3)
-    except ValueError:
-        proto, dummy, host = url.split("/", 2)
-        path = ""
-    if proto == "http:":
-        port = 80
-    elif proto == "https:":
-        import ssl
-        port = 443
-    else:
-        raise ValueError("Unsupported protocol: " + proto)
+def request(method, url, data=None, json=None, headers={}, stream=None,
+            cache_path="/", cache_file="/request.cache",
+            allow_redirects=True, max_redirects=5):
 
-    if ":" in host:
-        host, port = host.split(":", 1)
-        port = int(port)
+    for _ in range(max_redirects + 1):
 
-    ai = usocket.getaddrinfo(host, port, 0, usocket.SOCK_STREAM)
-    ai = ai[0]
+        try:
+            proto, dummy, host, path = url.split("/", 3)
+        except ValueError:
+            proto, dummy, host = url.split("/", 2)
+            path = ""
 
-    s = usocket.socket(ai[0], ai[1], ai[2])
-    try:
-        s.connect(ai[-1])
-        if proto == "https:":
-            s = ssl.wrap_socket(s, server_hostname=host)
-        s.write(b"%s /%s HTTP/1.0\r\n" % (method, path))
-        if not "Host" in headers:
-            s.write(b"Host: %s\r\n" % host)
-        # Iterate over keys to avoid tuple alloc
-        for k in headers:
-            s.write(k)
-            s.write(b": ")
-            s.write(headers[k])
-            s.write(b"\r\n")
-        if json is not None:
-            assert data is None
-            import ujson
-            data = ujson.dumps(json)
-            s.write(b"Content-Type: application/json\r\n")
-        if data:
-            if hasattr(data, "iter_lines"):
-                s.write(b"Content-Length: %d\r\n" % data.length())
-                s.write(b"\r\n")
-                for line in data.iter_lines():
-                    s.write(line)
-            else:
-                s.write(b"Content-Length: %d\r\n" % len(data))
-                s.write(b"\r\n")
-                s.write(data)
+        if proto == "http:":
+            port = 80
+        elif proto == "https:":
+            port = 443
         else:
-            s.write(b"\r\n")
+            raise ValueError("Unsupported protocol: " + proto)
 
-        l = s.readline()
-        #print(l)
-        l = l.split(None, 2)
-        status = int(l[1])
-        reason = ""
-        if len(l) > 2:
-            reason = l[2].rstrip()
-        while True:
+        if ":" in host:
+            host, port = host.split(":", 1)
+            port = int(port)
+
+        ai = usocket.getaddrinfo(host, port, 0, usocket.SOCK_STREAM)[0]
+        s = usocket.socket(ai[0], ai[1], ai[2])
+
+        try:
+            s.connect(ai[-1])
+            if proto == "https:":
+                gc.collect()
+                s = ssl.wrap_socket(s, server_hostname=host, cert_reqs=ssl.CERT_NONE)
+
+            s.write(b"%s /%s HTTP/1.0\r\n" % (method, path))
+
+            if "Host" not in headers:
+                s.write(b"Host: %s\r\n" % host)
+
+            for k in headers:
+                s.write(k)
+                s.write(b": ")
+                s.write(headers[k])
+                s.write(b"\r\n")
+
+            if json is not None:
+                assert data is None
+                import ujson
+                data = ujson.dumps(json)
+                s.write(b"Content-Type: application/json\r\n")
+
+            if data:
+                if hasattr(data, "iter_lines"):
+                    s.write(b"Content-Length: %d\r\n" % data.length())
+                    s.write(b"\r\n")
+                    for line in data.iter_lines():
+                        s.write(line)
+                else:
+                    s.write(b"Content-Length: %d\r\n" % len(data))
+                    s.write(b"\r\n")
+                    s.write(data)
+            else:
+                s.write(b"\r\n")
+
             l = s.readline()
-            if not l or l == b"\r\n":
-                break
-            #print(l)
-            if l.startswith(b"Transfer-Encoding:"):
-                if b"chunked" in l:
-                    raise ValueError("Unsupported " + l)
-            elif l.startswith(b"Location:") and not 200 <= status <= 299:
-                raise NotImplementedError("Redirects not yet supported")
-    except OSError:
-        s.close()
-        raise
+            parts = l.split(None, 2)
+            status = int(parts[1])
+            reason = parts[2].rstrip() if len(parts) > 2 else b""
 
-    resp = Response(s)
-    resp.status_code = status
-    resp.reason = reason
-    return resp
+            location = None
 
+            # --- Headers ---
+            while True:
+                l = s.readline()
+                if not l or l == b"\r\n":
+                    break
+                if l.startswith(b"Transfer-Encoding:") and b"chunked" in l:
+                    raise ValueError("Unsupported chunked encoding")
+                elif l.startswith(b"Location:"):
+                    location = l[9:].strip().decode()
+
+            # --- Redirect handling ---
+            if allow_redirects and location and status in (301, 302, 303, 307, 308):
+                s.close()
+
+                if status == 303:
+                    method = "GET"
+                    data = None
+
+                if location.startswith("/"):
+                    url = proto + "//" + host + location
+                else:
+                    url = location
+
+                continue
+
+            resp = Response(s)
+            resp.status_code = status
+            resp.reason = reason
+            return resp
+
+        except:
+            s.close()
+            raise
+    raise ValueError("Too many redirects")
 
 def head(url, **kw):
     return request("HEAD", url, **kw)
