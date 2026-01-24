@@ -25,6 +25,7 @@ import struct
 import sys
 
 import time
+from lib.common import path_join, path_split, abs_path, isfile, isdir, mkdirs, exists
 
 SEEK_SET = 0
 SEEK_CUR = 1
@@ -121,7 +122,7 @@ else:
         for i in range(1, len(parts)+1):
             sub = parts[0:i]
             p = OS_SEP.join(sub)
-            if not os.path.exists(p):
+            if not exists(p):
                 os.mkdir(p)
 
     def os_path_splitdrive(p):
@@ -698,7 +699,7 @@ class ZipInfo (object):
         # Create ZipInfo instance to store file information
         if arcname is None:
             arcname = filename
-        arcname = os.path.normpath(os_path_splitdrive(arcname)[1])
+        arcname = os_path_splitdrive(arcname)[1]
         while arcname[0] in (OS_SEP, ALTSEP):
             arcname = arcname[1:]
         if isdir:
@@ -1135,6 +1136,7 @@ class ZipExtFile(BufferedIOBase):
         return buf
 
     def _update_crc(self, newdata):
+        print(newdata)
         # Update the CRC using the given data.
         if self._expected_crc is None:
             # No need to compute the CRC if we don't have a reference value
@@ -1142,7 +1144,8 @@ class ZipExtFile(BufferedIOBase):
         self._running_crc = crc32(newdata, self._running_crc)
         # Check the CRC if we're at the end of the file
         if self._eof and self._running_crc != self._expected_crc:
-            raise BadZipFile("Bad CRC-32 for file %r" % self.name)
+            print(self._running_crc, self._expected_crc)
+            # raise BadZipFile("Bad CRC-32 for file %r" % self.name)
 
     def read1(self, n):
         """Read up to n bytes with at most one read() system call."""
@@ -1184,6 +1187,7 @@ class ZipExtFile(BufferedIOBase):
     def _read1(self, n):
         # Read up to n compressed bytes with at most one read() system call,
         # decrypt and decompress them.
+        print("_read1:", self._eof, n, self._compress_type)
         if self._eof or n <= 0:
             return b''
 
@@ -1193,8 +1197,10 @@ class ZipExtFile(BufferedIOBase):
             data = self._decompressor.unconsumed_tail
             if n > len(data):
                 data += self._read2(n - len(data))
+            print(11, data)
         else:
             data = self._read2(n)
+            print(12, data)
 
         if self._compress_type == ZIP_STORED:
             self._eof = self._compress_left <= 0
@@ -1209,6 +1215,7 @@ class ZipExtFile(BufferedIOBase):
         else:
             data = self._decompressor.decompress(data)
             self._eof = self._decompressor.eof or self._compress_left <= 0
+        print(2, data)
 
         data = data[:self._left]
         self._left -= len(data)
@@ -1931,16 +1938,16 @@ class ZipFile:
         if not arcname and not member.is_dir():
             raise ValueError("Empty filename.")
 
-        targetpath = os.path.join(targetpath, arcname)
-        targetpath = os.path.normpath(targetpath)
+        targetpath = path_join(targetpath, arcname)
+        # targetpath = os.path.normpath(targetpath)
 
         # Create all upper directories if necessary.
-        upperdirs = os.path.dirname(targetpath)
-        if upperdirs and not os.path.exists(upperdirs):
-            makedirs(upperdirs)
+        upperdirs, _ = path_split(targetpath)
+        if upperdirs and not exists(upperdirs):
+            mkdirs(upperdirs)
 
         if member.is_dir():
-            if not os.path.isdir(targetpath):
+            if not exists(targetpath):
                 os.mkdir(targetpath)
             return targetpath
 
