@@ -1,6 +1,7 @@
 back_up
 build
 .DS_Store
+.cache
 .chat_history
 .edit_cache.json
 .edit_history_cache.json
