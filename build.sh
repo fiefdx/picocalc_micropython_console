@@ -41,11 +41,14 @@ mpy-cross ./shell.py
 mpy-cross ./tea.py
 mpy-cross ./uftpd.py
 mpy-cross ./uping.py
+mpy-cross ./urtc.py
+mpy-cross ./utarfile.py
 mpy-cross ./wave.py
 mpy-cross ./wifi.py
 # mpy-cross ./writer_fast.py
 mpy-cross ./writer.py
 mpy-cross ./zipfile.py
+mpy-cross ./zlib.py
 mpy-cross ./mrequests/mrequests.py
 mpy-cross ./mrequests/urlencode.py
 mpy-cross ./mrequests/urlparseqs.py
