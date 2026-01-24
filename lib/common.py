@@ -236,6 +236,11 @@ class ClipBoard(object):
             return fp.read()
 
     @classmethod
+    def get_line(cls):
+        with open(cls.path, "r") as fp:
+            return fp.readline().strip()
+
+    @classmethod
     def iter_lines(cls):
         with open(cls.path, "r") as fp:
             line = fp.readline()

@@ -5,7 +5,7 @@ from micropython import const
 
 # from listfile import ListFile
 from .scheduler import Condition, Task, Message
-from .common import exists, path_join, isfile, isdir, path_split, abs_path, Resource
+from .common import exists, path_join, isfile, isdir, path_split, abs_path, Resource, ClipBoard
 from .display import Colors as C
 
 
@@ -284,6 +284,8 @@ class Shell(object):
                     self.cursor_move_right()
                 elif c in ("ES", "SAVE"):
                     pass
+                elif c == "Ctrl-V":
+                    self.paste()
                 elif len(c) == 1:
                     self.cache[-1] = self.cache[-1][:self.current_col] + c + self.cache[-1][self.current_col:]
                     self.cursor_move_right()
@@ -294,6 +296,11 @@ class Shell(object):
             #self.current_col = len(self.cache[-1])
         except Exception as e:
             print(sys.print_exception(e))
+
+    def paste(self):
+        line = ClipBoard.get_line()
+        if line:
+            self.cache[-1] = self.cache[-1][:self.current_col] + line + self.cache[-1][self.current_col:]        
             
     def write_line(self, line):
         self.cache.append(line)
