@@ -21,7 +21,7 @@ try:
     import _thread as thread
 except:
     print("no multi-threading module support")
-from machine import Pin, SPI, PWM
+from machine import Pin, SPI, PWM, SoftI2C
 from micropython import const
 
 import lib
@@ -30,10 +30,11 @@ from lib import sdcard
 # import font7
 from lib.display import ILI9488, Colors as C
 from lib.scheduler import Scheluder, Condition, Task, Message
-from lib.common import Resource
+from lib.common import Resource, Time
 from lib.shell import Shell
 from lib.keyboard import Keyboard
 import settings_pico2 as settings
+    
 # from writer_fast import CWriter
 sys.path.insert(0, "/bin")
 sys.path.append("/")
@@ -643,6 +644,10 @@ if __name__ == "__main__":
         Message.init_pool(25)
         Condition.init_pool(15)
         Task.init_pool(15)
+        if hasattr(settings, "rtc_sda"):
+            from lib.urtc import DS1307
+            i2c = SoftI2C(scl = settings.rtc_scl, sda = settings.rtc_sda)
+            Time.rtc = DS1307(i2c)
         s = Scheluder(cpu = 0)
         display_id = s.add_task(Task.get().load(display, "display", condition = Condition.get(), kwargs = {"scheduler": s}))
         monitor_id = s.add_task(Task.get().load(monitor, "monitor", condition = Condition.get(), kwargs = {"scheduler": s, "display_id": display_id}))
