@@ -127,6 +127,15 @@ def mkdirs(path):
         uos.mkdir(path)
 
 
+def ram_size(size):
+    if size > 1024 * 1024:
+        return "%6.2fM" % (size / 1024.0 / 1024.0, )
+    elif size > 1024:
+        return "%6.2fK" % (size / 1024.0, )
+    else:
+        return "%6.2fB" % size
+
+
 def get_size(size):
     if size > 1024 * 1024:
         return "%7.2fM" % (size / 1024.0 / 1024.0, )

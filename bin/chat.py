@@ -8,7 +8,7 @@ from lib.listfile import ListFile
 from lib.shell import Shell
 from lib.scheduler import Condition, Message
 from lib.ollama import Chat
-from lib.common import exists, path_join, isfile, isdir, mkdirs, path_split, Resource
+from lib.common import exists, path_join, isfile, isdir, mkdirs, path_split, Resource, ram_size
 from lib.display import Colors as C
 
 coroutine = True
@@ -242,7 +242,7 @@ class ChatShell(Shell):
         return ["", "", msg, "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]
 
     def update_stats(self, d):
-        self.stats = "[ C%3d%%|R%3d%%:%6.2fK|D %4dK|B[%s] %3d%%]" % (d[1], d[2], d[3] / 1024, d[6] / 1024, "C" if d[8] else "D", d[9])
+        self.stats = "[ C%3d%%|R%3d%%:%s|D %4dK|B[%s] %3d%%]" % (d[1], d[2], ram_size(d[3]), d[6] / 1024, "C" if d[8] else "D", d[9])
 
     def get_display_frame(self, c = None):
         data = {}

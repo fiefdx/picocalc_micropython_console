@@ -5,7 +5,7 @@ from micropython import const
 
 # from listfile import ListFile
 from .scheduler import Condition, Task, Message
-from .common import exists, path_join, isfile, isdir, path_split, abs_path, Resource, ClipBoard
+from .common import exists, path_join, isfile, isdir, path_split, abs_path, Resource, ClipBoard, ram_size
 from .display import Colors as C
 
 
@@ -235,7 +235,7 @@ class Shell(object):
         self.current_col = len(self.cache[-1])
 
     def update_stats(self, d):
-        self.stats = "[ C%3d%%|R%3d%%:%6.2fK|D %4dK|B[%s] %3d%%]" % (d[1], d[2], d[3] / 1024, d[6] / 1024, "C" if d[8] else "D", d[9])
+        self.stats = "[ C%3d%%|R%3d%%:%s|D %4dK|B[%s] %3d%%]" % (d[1], d[2], ram_size(d[3]), d[6] / 1024, "C" if d[8] else "D", d[9])
         if hasattr(self.current_shell, "update_stats"):
             self.current_shell.update_stats(d)
     
