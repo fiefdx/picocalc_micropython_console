@@ -24,15 +24,16 @@ class Message(object):
     def remain(cls):
         return sum(1 for m in cls.pool if m.processed)
 
-    def __init__(self, content, sender = None, sender_name = "", receiver = None, processed = False):
+    def __init__(self, content, sender = None, sender_name = "", receiver = None, processed = False, drop_size = 1):
         self.load(content, sender, sender_name, receiver, processed)
 
-    def load(self, content, sender = None, sender_name = "", receiver = None, processed = False):
+    def load(self, content, sender = None, sender_name = "", receiver = None, processed = False, drop_size = 1):
         self.content = content
         self.sender = sender
         self.sender_name = sender_name
         self.receiver = receiver
         self.processed = processed
+        self.drop_size = drop_size
         return self
 
     def release(self):
@@ -140,8 +141,11 @@ class Task(object):
         self.condition = condition
         
     def put_message(self, message):
-        self.msgs.append(message)
-        self.msgs_senders.append(message.sender)
+        if len(self.msgs) < message.drop_size:
+            self.msgs.append(message)
+            self.msgs_senders.append(message.sender)
+        else:
+            message.release()
         
     def get_message(self, sender = None):
         if not self.msgs:
