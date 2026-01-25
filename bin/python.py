@@ -251,26 +251,22 @@ def main(*args, **kwargs):
             shell.current_shell = s
             s.write_line("            Welcome to Python")
             s.write_char("\n")
-            yield Condition.get().load(sleep = 0, wait_msg = False, send_msgs = [
+            yield Condition.get().load(sleep = 0, wait_msg = True, send_msgs = [
                 Message.get().load(s.get_display_frame(), receiver = shell_id)
             ])
-            c = ""
             msg = task.get_message()
-            if msg:
-                c = msg.content["msg"]
-                msg.release()
+            c = msg.content["msg"]
+            msg.release()
             while not s.exit:
                 #print("char:", c)
                 s.input_char(c)
                 if not s.exit:
-                    yield Condition.get().load(sleep = 50, wait_msg = False, send_msgs = [
+                    yield Condition.get().load(sleep = 0, wait_msg = True, send_msgs = [
                         Message.get().load(s.get_display_frame(1 if c != "" else None), receiver = shell_id)
                     ])
-                    c = ""
                     msg = task.get_message()
-                    if msg:
-                        c = msg.content["msg"]
-                        msg.release()
+                    c = msg.content["msg"]
+                    msg.release()
             shell.disable_output = False
             shell.current_shell = None
             shell.loading = True

@@ -373,11 +373,11 @@ def storage(task, name, scheduler = None):
         msg.release()
         
         
-def cursor(task, name, interval = 500, scheduler = None, display_id = None, storage_id = None):
+def cursor(task, name, interval = 500, scheduler = None, display_id = None, storage_id = None, delay = 1500):
     condition_get = Condition.get
     task_get_msg = task.get_message
     msg_get = Message.get
-    yield condition_get().load(sleep = 1500)
+    yield condition_get().load(sleep = delay)
     shell = scheduler.shell
     set_cursor_color = scheduler.shell.set_cursor_color
     get_cursor_position = scheduler.shell.get_cursor_position
@@ -470,10 +470,17 @@ def shell(task, name, shell_id = 0, scheduler = None, display_id = None, storage
                 ])
         elif "stats" in msg.content:
             s.update_stats(msg.content["stats"])
-            if not s.disable_output and s is scheduler.shell:
-                yield condition_get().load(sleep = 0, send_msgs = [
-                    msg_get().load(s.get_display_frame(), receiver = display_id)
-                ])
+            if not s.disable_output:
+                if s is scheduler.shell:
+                    yield condition_get().load(sleep = 0, send_msgs = [
+                        msg_get().load(s.get_display_frame(), receiver = display_id)
+                    ])
+            else:
+                if scheduler.shell.current_shell:
+                    yield condition_get().load(sleep = 0, send_msgs = [
+                        msg_get().load(scheduler.shell.current_shell.get_display_frame(), receiver = display_id)
+                    ])
+            
         elif "refresh" in msg.content:
             if scheduler.shell and scheduler.shell.session_task_id and scheduler.exists_task(scheduler.shell.session_task_id):
                 yield condition_get().load(sleep = 0, send_msgs = [msg_get().load({"msg": "refresh"}, receiver = scheduler.shell.session_task_id)])
@@ -670,7 +677,7 @@ if __name__ == "__main__":
         shell_id_3 = s.add_task(Task.get().load(shell, "shell:3", condition = Condition.get(), kwargs = {"shell_id": 3, "scheduler": s, "display_id": display_id, "storage_id": storage_id, "delay": 1200}))
         # s.shell_id = shell_id_0
         # s.set_log_to(shell_id)
-        cursor_id = s.add_task(Task.get().load(cursor, "cursor", condition = Condition.get(), kwargs = {"interval": 500, "scheduler": s, "display_id": display_id, "storage_id": storage_id}))
+        cursor_id = s.add_task(Task.get().load(cursor, "cursor", condition = Condition.get(), kwargs = {"interval": 500, "scheduler": s, "display_id": display_id, "storage_id": storage_id, "delay": 2000}))
         s.cursor_id = cursor_id
         keyboard_id = s.add_task(Task.get().load(keyboard_input, "keyboard_input", condition = Condition.get(), kwargs = {"scheduler": s, "interval": 50, "display_id": display_id}))
         settings.led.on()
