@@ -33,14 +33,20 @@ from lib.scheduler import Scheluder, Condition, Task, Message
 from lib.common import Resource, Time, exists, mkdirs
 from lib.shell import Shell
 from lib.keyboard import Keyboard
-import settings_pico2 as settings
+# import settings_pico2 as settings
+import settings_esp32s2 as settings
+from lib import ntp
+ntp.ntp_delta = settings.ntp_delta
     
 # from writer_fast import CWriter
 sys.path.insert(0, "/bin")
 sys.path.append("/")
 
 if machine:
-    machine.freq(250000000, 250000000)
+    if os.uname().nodename == "esp32":
+        machine.freq(settings.cpu_freq)
+    else:
+        machine.freq(settings.cpu_freq, settings.cpu_freq)
     print("freq: %s mhz" % (machine.freq() / 1000000))
 if microcontroller:
     microcontroller.cpu.frequency = 250000000
@@ -641,12 +647,13 @@ def sound_output(task, name, scheduler = None):
 
 if __name__ == "__main__":
     try:
-        Message.init_pool(25)
-        Condition.init_pool(20)
-        Task.init_pool(20)
+        Message.init_pool(settings.messages)
+        Condition.init_pool(settings.conditions)
+        Task.init_pool(settings.tasks)
+        time.sleep_ms(500)
         if hasattr(settings, "rtc_sda"):
             from lib.urtc import DS1307
-            i2c = SoftI2C(scl = settings.rtc_scl, sda = settings.rtc_sda)
+            i2c = SoftI2C(scl = settings.rtc_scl, sda = settings.rtc_sda, freq = settings.rtc_freq)
             Time.rtc = DS1307(i2c)
             Time.sync_machine_rtc()
         Time.start_at = time.time()

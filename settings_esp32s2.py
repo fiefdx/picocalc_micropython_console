@@ -2,6 +2,11 @@ from machine import Pin
 from micropython import const
 import neopixel
 
+cpu_freq = const(240000000)
+messages = const(50)
+conditions = const(50)
+tasks = const(50)
+
 display_cs = Pin(13, Pin.OUT, value = 1)
 display_dc = Pin(34, Pin.OUT)
 display_rst = Pin(35, Pin.OUT)
@@ -27,6 +32,9 @@ pwm_right = Pin(7)
 
 rtc_scl = Pin(41)
 rtc_sda = Pin(8)
+rtc_freq = 4000
+
+ntp_delta = const(3155673600 + 3600 * 7)
 
 class led(object):
     np = neopixel.NeoPixel(Pin(9), 1)

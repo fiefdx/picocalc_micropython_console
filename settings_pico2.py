@@ -1,6 +1,11 @@
 from machine import Pin
 from micropython import const
 
+cpu_freq = const(250000000)
+messages = const(25)
+conditions = const(20)
+tasks = const(20)
+
 display_cs = Pin(13, Pin.OUT, value = 1)
 display_dc = Pin(14, Pin.OUT)
 display_rst = Pin(15, Pin.OUT)
@@ -26,5 +31,8 @@ pwm_right = Pin(27)
 
 rtc_scl = Pin(21)
 rtc_sda = Pin(28)
+rtc_freq = 4000
+
+ntp_delta = const(2208988800 + 3600 * 7)
 
 led = Pin("LED", Pin.OUT)
