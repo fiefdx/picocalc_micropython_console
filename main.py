@@ -476,7 +476,7 @@ def shell(task, name, shell_id = 0, scheduler = None, display_id = None, storage
                         msg_get().load(s.get_display_frame(), receiver = display_id)
                     ])
             else:
-                if scheduler.shell.current_shell:
+                if scheduler.shell.current_shell and hasattr(scheduler.shell.current_shell, "get_display_frame"):
                     yield condition_get().load(sleep = 0, send_msgs = [
                         msg_get().load(scheduler.shell.current_shell.get_display_frame(), receiver = display_id)
                     ])
