@@ -378,9 +378,6 @@ def cursor(task, name, interval = 500, scheduler = None, display_id = None, stor
     task_get_msg = task.get_message
     msg_get = Message.get
     yield condition_get().load(sleep = delay)
-    shell = scheduler.shell
-    set_cursor_color = scheduler.shell.set_cursor_color
-    get_cursor_position = scheduler.shell.get_cursor_position
     flash = 0
     enabled = True
     while True:
@@ -389,12 +386,12 @@ def cursor(task, name, interval = 500, scheduler = None, display_id = None, stor
             enabled = bool(msg.content.get("enabled", enabled))
 
         if enabled:
-            set_cursor_color(flash)
+            scheduler.shell.set_cursor_color(flash)
             flash ^= 1
-            if shell.enable_cursor:
-                payload = {"cursor": get_cursor_position()}
+            if scheduler.shell.enable_cursor:
+                payload = {"cursor": scheduler.shell.get_cursor_position()}
             else:
-                x, y, _ = get_cursor_position()
+                x, y, _ = scheduler.shell.get_cursor_position()
                 payload = {"cursor": (x, y, "hide")}
             yield condition_get().load(sleep = interval, send_msgs = [msg_get().load(payload, receiver = display_id)])
         else:
