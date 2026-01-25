@@ -33,8 +33,8 @@ from lib.scheduler import Scheluder, Condition, Task, Message
 from lib.common import Resource, Time, exists, mkdirs
 from lib.shell import Shell
 from lib.keyboard import Keyboard
-# import settings_pico2 as settings
-import settings_esp32s2 as settings
+import settings_pico2 as settings
+# import settings_esp32s2 as settings
 from lib import ntp
 ntp.ntp_delta = settings.ntp_delta
     
@@ -54,7 +54,7 @@ if microcontroller:
 
 
 def monitor(task, name, scheduler = None, display_id = None):
-    yield Condition.get().load(sleep = 2000)
+    yield Condition.get().load(sleep = 3000)
     n = 0
     ram_free = 0
     ram_used = 0
@@ -84,20 +84,20 @@ def monitor(task, name, scheduler = None, display_id = None):
     #         print(monitor_msg)
     #         # print(Message.remain(), Condition.remain(), Task.remain())
     #         # yield Condition.get().load(sleep = 1000)
-            if n % 10 == 0:
-                stat = os.statvfs("/")
-                size = stat[1] * stat[2]
-                free = stat[0] * stat[3]
-                used = size - free
+#             if n % 10 == 0:
+#                 stat = os.statvfs("/")
+#                 size = stat[1] * stat[2]
+#                 free = stat[0] * stat[3]
+#                 used = size - free
     #         print("Total: %6.2fK, Used: %6.2fK, Free: %6.2fK" % (size / 1024.0, used / 1024.0, free / 1024.0))
     #         yield Condition.get().load(
     #             sleep = 2000
     #         )
-            if n % 5 == 0:
-                if Resource.keyboard:
-                    b = Resource.keyboard.battery_status()
-                    plugged_in = b["charging"]
-                    level = b["level"]
+#             if n % 5 == 0:
+#                 if Resource.keyboard:
+#                     b = Resource.keyboard.battery_status()
+#                     plugged_in = b["charging"]
+#                     level = b["level"]
             n += 1
             if n >= 20:
                 n = 0
@@ -178,18 +178,20 @@ def render_rects(name, msg, lcd):
     for rect in msg.content[name]:
         x, y, w, h, color = rect
         lcd.rect(x, y, w, h, color)
+        
+        
+RENDER_TABLE = {
+    "bricks": render_bricks,
+    "texts":  render_texts,
+    "lines":  render_lines,
+    "rects":  render_rects,
+}
 
 
 def render(category, msg, lcd, refresh):
     name, render_type = category
-    renders = {
-        "bricks": (render_bricks, [name, msg, lcd]),
-        "texts": (render_texts, [name, msg, lcd]),
-        "lines": (render_lines, [name, msg, lcd]),
-        "rects": (render_rects, [name, msg, lcd]),
-    }
-    if render_type in renders:
-        renders[render_type][0](*renders[render_type][1])
+    if render_type in RENDER_TABLE:
+        RENDER_TABLE[render_type](*(name, msg, lcd))
         refresh = True
     return refresh
 
@@ -201,6 +203,15 @@ def display(task, name, scheduler = None):
         Resource.display = lcd
         lcd.fill(lcd.rgb(0, 0, 0))
         lcd.show()
+        
+        fill = lcd.fill
+        rect = lcd.rect
+        line = lcd.line
+        text = lcd.text
+        show = lcd.show
+        black = C.black
+        white = C.white
+        green = C.green
         
 #         wri = CWriter(lcd, font8)
 #         wri.wrap = False
@@ -219,7 +230,7 @@ def display(task, name, scheduler = None):
                 try:
                     refresh = False
                     if "clear" in msg.content:
-                        lcd.fill(lcd.rgb(0, 0, 0))
+                        fill(black)
                     if "frame" in msg.content:                   
                         frame = msg.content["frame"]
 #                         lines = [False for i in range(len(frame))]
@@ -245,12 +256,12 @@ def display(task, name, scheduler = None):
 #                             if l:
                             if l == "":
 #                                     lcd.text(clear_line, x, n * line_height, lcd.rgb(1, 1, 1))
-                                lcd.rect(0 , n * line_height + y_offset, 320, (n + 1) * line_height, lcd.rgb(0, 0, 0), True)
+                                rect(0 , n * line_height + y_offset, 320, (n + 1) * line_height, black, True)
 #                                     wri.set_textpos(lcd, n, 0)
 #                                     wri.printstring(clear_line)
                             else:
-                                lcd.rect(0 , n * line_height + y_offset, 320, (n + 1) * line_height, lcd.rgb(0, 0, 0), True)
-                                lcd.text(l, x, n * line_height + y_offset, lcd.rgb(1, 1, 1))
+                                rect(0 , n * line_height + y_offset, 320, (n + 1) * line_height, black, True)
+                                text(l, x, n * line_height + y_offset, white)
 #                                     wri.set_textpos(lcd, n, 0)
 #                                     wri.printstring(clear_line)
 #                                     wri.set_textpos(lcd, n, 0)
@@ -274,12 +285,12 @@ def display(task, name, scheduler = None):
                         refresh = True
                         x, y, c = msg.content["cursor"]
                         if c == "hide":
-                            lcd.line(x * width + 1, (y + 1) * line_height - 3 + y_offset, (x + 1) * width - 1, (y + 1) * line_height - 3 + y_offset, C.black)
+                            line(x * width + 1, (y + 1) * line_height - 3 + y_offset, (x + 1) * width - 1, (y + 1) * line_height - 3 + y_offset, black)
                         else:
                             if cursor_previous:
                                 xp, yp, cp = cursor_previous
-                                lcd.line(xp * width + 1, (yp + 1) * line_height - 3 + y_offset, (xp + 1) * width - 1, (yp + 1) * line_height - 3 + y_offset, C.black)
-                            lcd.line(x * width + 1, (y + 1) * line_height - 3 + y_offset, (x + 1) * width - 1, (y + 1) * line_height - 3 + y_offset, C.green if c else C.black)
+                                line(xp * width + 1, (yp + 1) * line_height - 3 + y_offset, (xp + 1) * width - 1, (yp + 1) * line_height - 3 + y_offset, black)
+                            line(x * width + 1, (y + 1) * line_height - 3 + y_offset, (x + 1) * width - 1, (y + 1) * line_height - 3 + y_offset, green if c else black)
                             cursor_previous = [x, y, c]
 #                         if c == "hide":
 #                             lcd.line(x * width - 1, y * line_height, x * width - 1, y * line_height + line_height - 3, lcd.rgb(0, 0, 0))
@@ -293,7 +304,7 @@ def display(task, name, scheduler = None):
                         for category in msg.content["render"]:
                             refresh = render(category, msg, lcd, refresh)
                     if refresh:
-                        lcd.show()
+                        show()
                     msg.release()
                     break
                 except Exception as e:
@@ -363,42 +374,47 @@ def storage(task, name, scheduler = None):
         
         
 def cursor(task, name, interval = 500, scheduler = None, display_id = None, storage_id = None):
-    yield Condition.get().load(sleep = 1500)
+    condition_get = Condition.get
+    task_get_msg = task.get_message
+    msg_get = Message.get
+    yield condition_get().load(sleep = 1500)
+    shell = scheduler.shell
+    set_cursor_color = scheduler.shell.set_cursor_color
+    get_cursor_position = scheduler.shell.get_cursor_position
     flash = 0
     enabled = True
     while True:
-        msg = task.get_message()
+        msg = task_get_msg()
         if msg:
-            if msg.content["enabled"]:
-                enabled = True
-            else:
-                enabled = False
+            enabled = bool(msg.content.get("enabled", enabled))
+
         if enabled:
-            scheduler.shell.set_cursor_color(flash)
-            if flash == 0:
-                flash = 1
+            set_cursor_color(flash)
+            flash ^= 1
+            if shell.enable_cursor:
+                payload = {"cursor": get_cursor_position()}
             else:
-                flash = 0
-            if scheduler.shell.enable_cursor:
-                yield Condition.get().load(sleep = interval, send_msgs = [Message.get().load({"cursor": scheduler.shell.get_cursor_position()}, receiver = display_id)])
-            else:
-                x, y, _ = scheduler.shell.get_cursor_position()
-                yield Condition.get().load(sleep = interval, send_msgs = [Message.get().load({"cursor": (x, y, "hide")}, receiver = display_id)])
+                x, y, _ = get_cursor_position()
+                payload = {"cursor": (x, y, "hide")}
+            yield condition_get().load(sleep = interval, send_msgs = [msg_get().load(payload, receiver = display_id)])
         else:
-            yield Condition.get().load(sleep = interval)
+            yield condition_get().load(sleep = interval)
         if msg:
             msg.release()
         
         
 def shell(task, name, shell_id = 0, scheduler = None, display_id = None, storage_id = None, delay = 1000):
-    yield Condition.get().load(sleep = delay)
+    condition_get = Condition.get
+    task_get_msg = task.get_message
+    msg_get = Message.get
+    yield condition_get().load(sleep = delay)
     width, height = 39, 28 # 52, 29 for 6x8 font
     s = Shell(display_size = (width, height), cache_size = (-1, 200), history_length = 100, scheduler = scheduler, storage_id = storage_id, display_id = display_id)
     s.write_line("           Welcome to TinyShell")
     s.write_char("\n")
 #     s.write_line("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890`-=~!@#$%^&*()_+[]\\{}|;':\",./<>?")
 #     s.write_char("\n")
-    yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load(s.get_display_frame(), receiver = display_id)])
+    yield condition_get().load(sleep = 0, send_msgs = [msg_get().load(s.get_display_frame(), receiver = display_id)])
 #     cursor_id = scheduler.add_task(Task.get().load(cursor, "cursor", kwargs = {"interval": 500, "s": s, "display_id": display_id, "storage_id": storage_id}))
 #     scheduler.shell = s
     if hasattr(scheduler, "shells"):
@@ -408,64 +424,53 @@ def shell(task, name, shell_id = 0, scheduler = None, display_id = None, storage
     scheduler.shell = scheduler.shells[0][1]
     scheduler.current_shell_id = scheduler.shells[0][0]
 #     s.cursor_id = cursor_id
+    shell = scheduler.shell
+    
+    def send_frame():
+        return condition_get().load(sleep = 0, send_msgs = [
+            msg_get().load(s.get_display_frame(), receiver = display_id)
+        ])
+
     while True:
-        yield Condition.get().load(sleep = 0, wait_msg = True)
-        msg = task.get_message()
-        if "clear" in msg.content:
-            if not s.disable_output and s is scheduler.shell:
-                yield Condition.get().load(sleep = 0, send_msgs = [
-                    Message.get().load({"clear": True}, receiver = display_id)
+        yield condition_get().load(sleep = 0, wait_msg = True)
+        msg = task_get_msg()
+        content = msg.content
+        if "clear" in content:
+            if (not s.disable_output) and (s is shell):
+                yield condition_get().load(sleep = 0, send_msgs = [
+                    msg_get().load({"clear": True}, receiver = display_id)
                 ])
-                yield Condition.get().load(sleep = 0, send_msgs = [
-                    Message.get().load(s.get_display_frame(), receiver = display_id)
+                yield send_frame()
+        if "char" in content:
+            s.input_char(content["char"])
+            if (not s.disable_output) and (s is shell):
+                yield send_frame()
+        elif "output" in content:
+            s.write_lines(content["output"], end = True)
+            if (not s.disable_output) and (s is shell):
+                yield send_frame()
+        elif "output_part" in content:
+            s.write_lines(content["output_part"], end = False)
+            if (not s.disable_output) and (s is shell):
+                yield send_frame()
+        elif "output_char" in content:
+            s.write_char(content["output_char"])
+            if (not s.disable_output) and (s is shell):
+                yield send_frame()
+        elif "frame" in content:
+            if s is shell:
+                yield condition_get().load(sleep = 0, send_msgs = [
+                    msg_get().load(content, receiver = display_id)
                 ])
-        if "char" in msg.content:
-            c = msg.content["char"]
-            s.input_char(c)
-            if not s.disable_output and s is scheduler.shell:
-                yield Condition.get().load(sleep = 0, send_msgs = [
-                    Message.get().load(s.get_display_frame(), receiver = display_id)
-                ])
-        elif "output" in msg.content:
-            output = msg.content["output"]
-            s.write_lines(output, end = True)
-            if not s.disable_output and s is scheduler.shell:
-                yield Condition.get().load(sleep = 0, send_msgs = [
-                    Message.get().load(s.get_display_frame(), receiver = display_id)
-                ])
-        elif "output_part" in msg.content:
-            output = msg.content["output_part"]
-            s.write_lines(output, end = False)
-            if not s.disable_output and s is scheduler.shell:
-                yield Condition.get().load(sleep = 0, send_msgs = [
-                    Message.get().load(s.get_display_frame(), receiver = display_id)
-                ])
-        elif "output_char" in msg.content:
-            c = msg.content["output_char"]
-            s.write_char(c)
-            if not s.disable_output and s is scheduler.shell:
-                yield Condition.get().load(sleep = 0, send_msgs = [
-                    Message.get().load(s.get_display_frame(), receiver = display_id)
-                ])
-        elif "frame" in msg.content:
-            if s is scheduler.shell:
-                yield Condition.get().load(sleep = 0, send_msgs = [
-                    Message.get().load(msg.content, receiver = display_id)
-                ])
-        elif "stats" in msg.content:
-            s.update_stats(msg.content["stats"])
-            if not s.disable_output and s is scheduler.shell:
-                yield Condition.get().load(sleep = 0, send_msgs = [
-                    Message.get().load(s.get_display_frame(), receiver = display_id)
-                ])
-        elif "refresh" in msg.content:
-            if scheduler.shell and scheduler.shell.session_task_id and scheduler.exists_task(scheduler.shell.session_task_id):
-                yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"msg": "refresh"}, receiver = scheduler.shell.session_task_id)])
-            else:
-                if not s.disable_output and s is scheduler.shell:
-                    yield Condition.get().load(sleep = 0, send_msgs = [
-                        Message.get().load(s.get_display_frame(), receiver = display_id)
-                    ])
+        elif "stats" in content:
+            s.update_stats(content["stats"])
+            if (not s.disable_output) and (s is shell):
+                yield send_frame()
+        elif "refresh" in content:
+            if shell and shell.session_task_id and scheduler.exists_task(shell.session_task_id):
+                yield condition_get().load(sleep = 0, send_msgs = [msg_get().load({"msg": "refresh"}, receiver = shell.session_task_id)])
+            elif (not s.disable_output) and (s is shell):
+                yield send_frame()
         msg.release()
         
         
@@ -479,15 +484,15 @@ def keyboard_input(task, name, scheduler = None, interval = 50, display_id = Non
 #         b'\x85': "F5",
         # b'\x86': "F6",
         # b'\x87': "F7",
-        b'\x88': "F8",
-        b'\x89': "F9",
-        b'\x90': "F10",
-        b'\xc1': "CAP",
-        b'\x1b[F': "END",
-        b'\x1b[H': "HOME",
-        b'\xd0': "BREAK",
+        b'\x88', # : "F8",
+        b'\x89', # : "F9",
+        b'\x90', # : "F10",
+        b'\xc1', # : "CAP",
+        b'\x1b[F', # : "END",
+        b'\x1b[H', # : "HOME",
+        b'\xd0', # : "BREAK",
 #         b'\x1b[3~': "DEL",
-        b'\x1b\xd1': "INS",
+        b'\x1b\xd1', # : "INS",
     }
     key_map = {
         b'\x13': "SAVE",
@@ -512,99 +517,80 @@ def keyboard_input(task, name, scheduler = None, interval = 50, display_id = Non
         b'\x87': "F7",
     }
     Resource.keyboard = k
-    yield Condition.get().load(sleep = 1000)
+    condition_get = Condition.get
+    msg_get = Message.get
+    set_log_to = scheduler.set_log_to
+    yield condition_get().load(sleep = 1000)
     key_sound = const(2000)
     enable_sound = False
     keys = bytearray(30)
+    
+    def beep():
+        return condition_get().load(sleep = 0, send_msgs = [msg_get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
+    
+    def switch_shell(idx):
+        yield condition_get().load(sleep = 0, send_msgs = [
+            msg_get().load({"clear": True}, receiver = display_id)
+        ])
+        scheduler.shell = scheduler.shells[idx][1]
+        scheduler.current_shell_id = scheduler.shells[idx][0]
+        set_log_to(scheduler.current_shell_id)
+        yield condition_get().load(sleep = 0, send_msgs = [msg_get().load({"refresh": True}, receiver = scheduler.current_shell_id)])
+    
     while True:
         try:
             if k.disable:
-                yield Condition.get().load(sleep = 1000)
+                yield condition_get().load(sleep = 1000)
+                continue
+            
+            yield condition_get().load(sleep = interval)
+            n = k.readinto(keys)
+            if not n or n > 4:
+                continue
+            
+            # print("size: ", n)
+            # print("keys: ", keys[:n])
+            code = bytes(keys[:n])
+            # print("code: ", code, code in key_map)
+            if code in key_map_ignore:
+                continue
+            
+            key = key_map.get(code)
+            if key is None:
+                try:
+                    key = code.decode()
+                except:
+                    continue
+            
+            # print("key2: ", key)
+            if key == 'F1': # F1
+                if enable_sound:
+                    yield beep()
+                yield from switch_shell(0)
+            elif key == 'F2': # F2
+                if enable_sound:
+                    yield beep()
+                yield from switch_shell(1)
+            elif key == 'F6': # F6
+                if enable_sound:
+                    yield beep()
+                yield from switch_shell(2)
+            elif key == 'F7': # F7
+                if enable_sound:
+                    yield beep()
+                yield from switch_shell(3)
+            elif key == "Ctrl-M":
+                enable_sound = not enable_sound
+                if enable_sound:
+                    yield beep()
             else:
-                yield Condition.get().load(sleep = interval)
-                n = k.readinto(keys)
-                if n is not None:
-                    # print("size: ", n)
-                    # print("keys: ", keys[:n])
-                    if n == 1 or n == 2 or n == 3 or n == 4:
-                        code = bytes(keys[:n])
-                        # print("code: ", code, code in key_map)
-                        if code not in key_map_ignore:
-                            try:
-    #                             key = code.decode()
-    #                             print("key1: ", key)
-    #                             if n == 2 and code.find(b'\x1b') == 0:
-    #                                 if key[1] == "S":
-    #                                     key = "SAVE"
-    #                                 elif key[1] == "C":
-    #                                     key = "Ctrl-C"
-    #                                 elif key[1] == "X":
-    #                                     key = "Ctrl-X"
-    #                                 elif key[1] == "V":
-    #                                     key = "Ctrl-V"
-                                if code in key_map:
-                                    key = key_map[code]
-                                else:
-                                    key = code.decode()
-                                # print("key2: ", key)
-                                if key == 'F1': # F1
-                                    if enable_sound:
-                                        yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
-                                    yield Condition.get().load(sleep = 0, send_msgs = [
-                                        Message.get().load({"clear": True}, receiver = display_id)
-                                    ])
-                                    scheduler.shell = scheduler.shells[0][1]
-                                    scheduler.current_shell_id = scheduler.shells[0][0]
-                                    scheduler.set_log_to(scheduler.current_shell_id)
-                                    yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"refresh": True}, receiver = scheduler.current_shell_id)])
-                                elif key == 'F2': # F2
-                                    if enable_sound:
-                                        yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
-                                    yield Condition.get().load(sleep = 0, send_msgs = [
-                                        Message.get().load({"clear": True}, receiver = display_id)
-                                    ])
-                                    scheduler.shell = scheduler.shells[1][1]
-                                    scheduler.current_shell_id = scheduler.shells[1][0]
-                                    scheduler.set_log_to(scheduler.current_shell_id)
-                                    yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"refresh": True}, receiver = scheduler.current_shell_id)])
-                                elif key == 'F6': # F6
-                                    if enable_sound:
-                                        yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
-                                    yield Condition.get().load(sleep = 0, send_msgs = [
-                                        Message.get().load({"clear": True}, receiver = display_id)
-                                    ])
-                                    scheduler.shell = scheduler.shells[2][1]
-                                    scheduler.current_shell_id = scheduler.shells[2][0]
-                                    scheduler.set_log_to(scheduler.current_shell_id)
-                                    yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"refresh": True}, receiver = scheduler.current_shell_id)])
-                                elif key == 'F7': # F7
-                                    if enable_sound:
-                                        yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
-                                    yield Condition.get().load(sleep = 0, send_msgs = [
-                                        Message.get().load({"clear": True}, receiver = display_id)
-                                    ])
-                                    scheduler.shell = scheduler.shells[3][1]
-                                    scheduler.current_shell_id = scheduler.shells[3][0]
-                                    scheduler.set_log_to(scheduler.current_shell_id)
-                                    yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"refresh": True}, receiver = scheduler.current_shell_id)])      
-                                elif key == "Ctrl-M":
-                                    if enable_sound:
-                                        enable_sound = False
-                                    else:
-                                        yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
-                                        enable_sound = True
-                                else:
-                                    if scheduler.shell and scheduler.shell.session_task_id and scheduler.exists_task(scheduler.shell.session_task_id):
-                                        if enable_sound:
-                                            yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
-                                        yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"msg": key, "keys": [key]}, receiver = scheduler.shell.session_task_id)])
-                                    else:
-                                        if enable_sound:
-                                            yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
-                                        yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"char": key}, receiver = scheduler.current_shell_id)])
-                            except:
-                                pass
-                                # print("Except: ", code)
+                shell = scheduler.shell
+                if enable_sound:
+                    yield beep()
+                if shell and shell.session_task_id and scheduler.exists_task(shell.session_task_id):
+                    yield condition_get().load(sleep = 0, send_msgs = [msg_get().load({"msg": key, "keys": [key]}, receiver = shell.session_task_id)])
+                else:
+                    yield condition_get().load(sleep = 0, send_msgs = [msg_get().load({"char": key}, receiver = scheduler.current_shell_id)])
         except Exception as e:
             buf = StringIO()
             sys.print_exception(e, buf)
@@ -614,15 +600,17 @@ def keyboard_input(task, name, scheduler = None, interval = 50, display_id = Non
         
         
 def sound_output(task, name, scheduler = None):
+    condition_get = Condition.get
+    task_get_msg = task.get_message
     while True:
         try:
-            yield Condition.get().load(sleep = 0, wait_msg = True)
-            msg = task.get_message()
+            yield condition_get().load(sleep = 0, wait_msg = True)
+            msg = task_get_message()
+            left_pwm = PWM(settings.pwm_left)
+            right_pwm = PWM(settings.pwm_right)
             tone_freq = msg.content["freq"]
             tone_length = msg.content["length"]
             tone_volume = msg.content["volume"]
-            left_pwm = PWM(settings.pwm_left)
-            right_pwm = PWM(settings.pwm_right)
             if tone_freq >= 20:
                 left_pwm.freq(tone_freq)
                 right_pwm.freq(tone_freq)
@@ -631,7 +619,7 @@ def sound_output(task, name, scheduler = None):
             if tone_length < 10:
                 sleep_ms(tone_length)
             else:
-                yield Condition.get().load(sleep = tone_length)
+                yield condition_get().load(sleep = tone_length)
             left_pwm.duty_u16(0)
             right_pwm.duty_u16(0)
             left_pwm.deinit()
