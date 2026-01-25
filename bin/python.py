@@ -208,7 +208,8 @@ class PyShell(Shell):
         self.cache_to_frame_history()
 
     def update_stats(self, d):
-        self.stats = "[ C%3d%%|R%3d%%:%s|D %4dK|B[%s] %3d%%]" % (d[1], d[2], ram_size(d[3]), d[6] / 1024, "C" if d[8] else "D", d[9])
+        # self.stats = "[ C%3d%%|R%3d%%:%s|D %4dK|B[%s] %3d%%]" % (d[1], d[2], ram_size(d[3]), d[6] / 1024, "C" if d[8] else "D", d[9])
+        self.stats = "[  CPU:%3d%%| RAM:%3d%%|%s|%s  ]" % (d[1], d[2], ram_size(d[3]), ram_size(d[4]))
 
     def get_display_frame(self, c = None):
         data = {}

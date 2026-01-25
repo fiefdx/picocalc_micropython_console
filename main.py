@@ -467,15 +467,15 @@ def shell(task, name, shell_id = 0, scheduler = None, display_id = None, storage
                 ])
         elif "stats" in msg.content:
             s.update_stats(msg.content["stats"])
-            if not s.disable_output:
+            if s.disable_output:
+                if scheduler.shell.current_shell and hasattr(scheduler.shell.current_shell, "get_display_frame") and not scheduler.shell.current_shell.loading:
+                    yield condition_get().load(sleep = 0, send_msgs = [
+                        msg_get().load(scheduler.shell.current_shell.get_display_frame(), receiver = display_id)
+                    ])
+            else:
                 if s is scheduler.shell:
                     yield condition_get().load(sleep = 0, send_msgs = [
                         msg_get().load(s.get_display_frame(), receiver = display_id)
-                    ])
-            else:
-                if scheduler.shell.current_shell and hasattr(scheduler.shell.current_shell, "get_display_frame"):
-                    yield condition_get().load(sleep = 0, send_msgs = [
-                        msg_get().load(scheduler.shell.current_shell.get_display_frame(), receiver = display_id)
                     ])
             
         elif "refresh" in msg.content:
