@@ -3,7 +3,7 @@ import gc
 import sys
 from io import StringIO
 import time
-from machine import SPI
+from machine import SPI, soft_reset
 
 import lib
 from lib.wifi import WIFI
@@ -11,6 +11,7 @@ from lib import sdcard
 from lib.display import ILI9488, Colors as C
 from lib.keyboard import Keyboard
 from lib import uftpd
+from lib.common import exists
 # import settings_pico2 as settings
 import settings_esp32s2 as settings
 
@@ -178,4 +179,4 @@ if __name__ == "__main__":
     if exists("/main.shell.py"):
         os.rename("/main.py", "/main.ftp.py")
         os.rename("/main.shell.py", "/main.py")
-        machine.soft_reset()
+        soft_reset()
