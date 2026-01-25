@@ -33,8 +33,8 @@ from lib.scheduler import Scheluder, Condition, Task, Message
 from lib.common import Resource, Time, exists, mkdirs
 from lib.shell import Shell
 from lib.keyboard import Keyboard
-import settings_pico2 as settings
-# import settings_esp32s2 as settings
+# import settings_pico2 as settings
+import settings_esp32s2 as settings
 from lib import ntp
 ntp.ntp_delta = settings.ntp_delta
     
@@ -424,53 +424,64 @@ def shell(task, name, shell_id = 0, scheduler = None, display_id = None, storage
     scheduler.shell = scheduler.shells[0][1]
     scheduler.current_shell_id = scheduler.shells[0][0]
 #     s.cursor_id = cursor_id
-    shell = scheduler.shell
-    
-    def send_frame():
-        return condition_get().load(sleep = 0, send_msgs = [
-            msg_get().load(s.get_display_frame(), receiver = display_id)
-        ])
-
     while True:
         yield condition_get().load(sleep = 0, wait_msg = True)
         msg = task_get_msg()
-        content = msg.content
-        if "clear" in content:
-            if (not s.disable_output) and (s is shell):
+        if "clear" in msg.content:
+            if not s.disable_output and s is scheduler.shell:
                 yield condition_get().load(sleep = 0, send_msgs = [
                     msg_get().load({"clear": True}, receiver = display_id)
                 ])
-                yield send_frame()
-        if "char" in content:
-            s.input_char(content["char"])
-            if (not s.disable_output) and (s is shell):
-                yield send_frame()
-        elif "output" in content:
-            s.write_lines(content["output"], end = True)
-            if (not s.disable_output) and (s is shell):
-                yield send_frame()
-        elif "output_part" in content:
-            s.write_lines(content["output_part"], end = False)
-            if (not s.disable_output) and (s is shell):
-                yield send_frame()
-        elif "output_char" in content:
-            s.write_char(content["output_char"])
-            if (not s.disable_output) and (s is shell):
-                yield send_frame()
-        elif "frame" in content:
-            if s is shell:
                 yield condition_get().load(sleep = 0, send_msgs = [
-                    msg_get().load(content, receiver = display_id)
+                    msg_get().load(s.get_display_frame(), receiver = display_id)
                 ])
-        elif "stats" in content:
-            s.update_stats(content["stats"])
-            if (not s.disable_output) and (s is shell):
-                yield send_frame()
-        elif "refresh" in content:
-            if shell and shell.session_task_id and scheduler.exists_task(shell.session_task_id):
-                yield condition_get().load(sleep = 0, send_msgs = [msg_get().load({"msg": "refresh"}, receiver = shell.session_task_id)])
-            elif (not s.disable_output) and (s is shell):
-                yield send_frame()
+        if "char" in msg.content:
+            c = msg.content["char"]
+            s.input_char(c)
+            if not s.disable_output and s is scheduler.shell:
+                yield condition_get().load(sleep = 0, send_msgs = [
+                    msg_get().load(s.get_display_frame(), receiver = display_id)
+                ])
+        elif "output" in msg.content:
+            output = msg.content["output"]
+            s.write_lines(output, end = True)
+            if not s.disable_output and s is scheduler.shell:
+                yield condition_get().load(sleep = 0, send_msgs = [
+                    msg_get().load(s.get_display_frame(), receiver = display_id)
+                ])
+        elif "output_part" in msg.content:
+            output = msg.content["output_part"]
+            s.write_lines(output, end = False)
+            if not s.disable_output and s is scheduler.shell:
+                yield condition_get().load(sleep = 0, send_msgs = [
+                    msg_get().load(s.get_display_frame(), receiver = display_id)
+                ])
+        elif "output_char" in msg.content:
+            c = msg.content["output_char"]
+            s.write_char(c)
+            if not s.disable_output and s is scheduler.shell:
+                yield condition_get().load(sleep = 0, send_msgs = [
+                    msg_get().load(s.get_display_frame(), receiver = display_id)
+                ])
+        elif "frame" in msg.content:
+            if s is scheduler.shell:
+                yield condition_get().load(sleep = 0, send_msgs = [
+                    msg_get().load(msg.content, receiver = display_id)
+                ])
+        elif "stats" in msg.content:
+            s.update_stats(msg.content["stats"])
+            if not s.disable_output and s is scheduler.shell:
+                yield condition_get().load(sleep = 0, send_msgs = [
+                    msg_get().load(s.get_display_frame(), receiver = display_id)
+                ])
+        elif "refresh" in msg.content:
+            if scheduler.shell and scheduler.shell.session_task_id and scheduler.exists_task(scheduler.shell.session_task_id):
+                yield condition_get().load(sleep = 0, send_msgs = [msg_get().load({"msg": "refresh"}, receiver = scheduler.shell.session_task_id)])
+            else:
+                if not s.disable_output and s is scheduler.shell:
+                    yield condition_get().load(sleep = 0, send_msgs = [
+                        msg_get().load(s.get_display_frame(), receiver = display_id)
+                    ])
         msg.release()
         
         
@@ -519,7 +530,6 @@ def keyboard_input(task, name, scheduler = None, interval = 50, display_id = Non
     Resource.keyboard = k
     condition_get = Condition.get
     msg_get = Message.get
-    set_log_to = scheduler.set_log_to
     yield condition_get().load(sleep = 1000)
     key_sound = const(2000)
     enable_sound = False
@@ -534,7 +544,7 @@ def keyboard_input(task, name, scheduler = None, interval = 50, display_id = Non
         ])
         scheduler.shell = scheduler.shells[idx][1]
         scheduler.current_shell_id = scheduler.shells[idx][0]
-        set_log_to(scheduler.current_shell_id)
+        scheduler.set_log_to(scheduler.current_shell_id)
         yield condition_get().load(sleep = 0, send_msgs = [msg_get().load({"refresh": True}, receiver = scheduler.current_shell_id)])
     
     while True:
@@ -605,7 +615,7 @@ def sound_output(task, name, scheduler = None):
     while True:
         try:
             yield condition_get().load(sleep = 0, wait_msg = True)
-            msg = task_get_message()
+            msg = task_get_msg()
             left_pwm = PWM(settings.pwm_left)
             right_pwm = PWM(settings.pwm_right)
             tone_freq = msg.content["freq"]
