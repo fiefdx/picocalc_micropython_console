@@ -677,7 +677,7 @@ if __name__ == "__main__":
         shell_id_3 = s.add_task(Task.get().load(shell, "shell:3", condition = Condition.get(), kwargs = {"shell_id": 3, "scheduler": s, "display_id": display_id, "storage_id": storage_id, "delay": 1200}))
         # s.shell_id = shell_id_0
         # s.set_log_to(shell_id)
-        cursor_id = s.add_task(Task.get().load(cursor, "cursor", condition = Condition.get(), kwargs = {"interval": 500, "scheduler": s, "display_id": display_id, "storage_id": storage_id, "delay": 2000}))
+        cursor_id = s.add_task(Task.get().load(cursor, "cursor", condition = Condition.get(), kwargs = {"interval": 500, "scheduler": s, "display_id": display_id, "storage_id": storage_id, "delay": 3000}))
         s.cursor_id = cursor_id
         keyboard_id = s.add_task(Task.get().load(keyboard_input, "keyboard_input", condition = Condition.get(), kwargs = {"scheduler": s, "interval": 50, "display_id": display_id}))
         settings.led.on()
