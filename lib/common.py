@@ -411,7 +411,7 @@ class Time(object):
         now = cls.machine_rtc.datetime()
         if cls.rtc:
             now = cls.rtc.datetime()
-        return "%04d-%02d-%02d %02d:%02d:%02d %s" % (now[0], now[1], now[2], now[4], now[5], now[6], cls.days[now[3]])
+        return "%04d-%02d-%02d %02d:%02d:%02d %s" % (now[0], now[1], now[2], now[4], now[5], now[6], cls.days[now[3] % 7])
     
     @classmethod
     def sync(cls):
@@ -429,7 +429,11 @@ class Time(object):
         try:            
             if cls.rtc:
                 n = cls.rtc.datetime()
-                cls.machine_rtc.datetime((n[0], n[1], n[2], n[6], n[3], n[4], n[5], n[7]))
-        except:
+                if n[7] is None:
+                    cls.machine_rtc.datetime((n[0], n[1], n[2], n[6], n[3], n[4], n[5], 0))
+                else:
+                    cls.machine_rtc.datetime((n[0], n[1], n[2], n[6], n[3], n[4], n[5], n[7]))
+        except Exception as e:
+            print(e)
             return False
         return True
