@@ -523,6 +523,7 @@ def keyboard_input(task, name, scheduler = None, interval = 50, display_id = Non
             yield condition_get().load(sleep = interval)
             n = k.readinto(keys)
             if n:
+                n = 1
                 for i in range(n):
                     code = bytes(keys[i:i+1])
                     # print("size:", n, ", code:", code)                    
@@ -644,7 +645,7 @@ if __name__ == "__main__":
         # s.set_log_to(shell_id)
         cursor_id = s.add_task(Task.get().load(cursor, "cursor", condition = Condition.get(), kwargs = {"interval": 500, "scheduler": s, "display_id": display_id, "storage_id": storage_id, "delay": 3000}))
         s.cursor_id = cursor_id
-        keyboard_id = s.add_task(Task.get().load(keyboard_input, "keyboard_input", condition = Condition.get(), kwargs = {"scheduler": s, "interval": 100, "display_id": display_id}))
+        keyboard_id = s.add_task(Task.get().load(keyboard_input, "keyboard_input", condition = Condition.get(), kwargs = {"scheduler": s, "interval": 50, "display_id": display_id}))
         settings.led.on()
         # settings.led.off()
         s.run()
