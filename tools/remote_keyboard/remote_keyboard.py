@@ -145,11 +145,11 @@ KEYS_MAP = {
     b'\xd4': "BB",
     b'\x81': "F1",
     b'\x82': "F2",
-    # b'\x83': "F3",
-    # b'\x84': "F4",
-    # b'\x85': "F5",
-    # b'\x86': "F6",
-    # b'\x87': "F7",
+    b'\x83': "F3",
+    b'\x84': "F4",
+    b'\x85': "F5",
+    b'\x86': "F6",
+    b'\x87': "F7",
     b'\x88': "F8",
     b'\x89': "F9",
     b'\x90': "F10",
@@ -319,11 +319,21 @@ class UserInterface(object):
                         self.key = self.keys[event.key][1]
                     elif event.mod & pygame.KMOD_SHIFT:
                         self.key = self.keys[event.key][1]
+                        if self.key == b'\xb5':
+                            self.key = b'\x84'
+                        elif self.key == b'\xb6':
+                            self.key = b'\xd4'
+                        elif self.key == b'\xb4':
+                            self.key = b'\x83'
+                        elif self.key == b'\xb7':
+                            self.key = b'\x85'
                     elif event.mod & pygame.KMOD_CTRL:
                         if self.key == b'\x73' or self.key == b'\x53': # "s", "S"
                             self.key = b'\x13' # "SAVE"
                         elif b'\x7a' >= self.key >= b'\x61' or b'\x5a' >= self.key >= b'\x41': # "z", "a", "Z", "A"
                             self.key = bytes([self.key[0] & 0x1f]) # "Ctrl-" + 
+                        elif b'\x39' >= self.key >= b'\x31': # F1 ~ F4
+                            self.key = bytes([self.key[0] + 0x50])
                     self.s.sendall(self.key)
                     self.input += KEYS_MAP[self.key] if KEYS_MAP[self.key] != "\b" else " "
                     if KEYS_MAP[self.key] in self.chars:
