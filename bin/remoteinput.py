@@ -2,7 +2,7 @@ import sys
 import socket
 
 from lib.scheduler import Task, Condition, Message
-from lib.common import exists, path_join
+from lib.common import exists, path_join, KEYS_MAP
 
 coroutine = True
 
@@ -28,24 +28,26 @@ def remote_input(task, name, scheduler = None, interval = 50):
                 #print('connect form', addr)
                 conn.setblocking(False)
             else:
-                key = conn.recv(6).decode()
-                if not key:
-                    conn.close()
-                    conn = None
-                elif key != "":
-                    if (key not in ("ES", "UP", "DN", "LT", "RT", "BX", "BB", "BY", "BA", "SAVE", "SUP", "SDN") and not key.startswith("Ctrl-")) and len(key) > 1:
-                        for k in key:
-                            # print("key: ", k)
-                            if scheduler.shell and scheduler.shell.session_task_id and scheduler.exists_task(scheduler.shell.session_task_id):
-                                yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"msg": k, "keys": []}, receiver = scheduler.shell.session_task_id)])
-                            else:
-                                yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"char": k}, receiver = scheduler.current_shell_id)])
-                    else:
-                        # print("key: ", key)
-                        if scheduler.shell and scheduler.shell.session_task_id and scheduler.exists_task(scheduler.shell.session_task_id):
-                            yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"msg": key, "keys": []}, receiver = scheduler.shell.session_task_id)])
+                keys = conn.recv(6)
+                for b in keys:
+                    key = KEYS_MAP.get(bytes([b]))
+                    if not key:
+                        conn.close()
+                        conn = None
+                    elif key != "":
+                        if (key not in ("ES", "UP", "DN", "LT", "RT", "BX", "BB", "BY", "BA", "SAVE", "SUP", "SDN") and not key.startswith("Ctrl-")) and len(key) > 1:
+                            for k in key:
+                                # print("key: ", k)
+                                if scheduler.shell and scheduler.shell.session_task_id and scheduler.exists_task(scheduler.shell.session_task_id):
+                                    yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"msg": k, "keys": []}, receiver = scheduler.shell.session_task_id)])
+                                else:
+                                    yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"char": k}, receiver = scheduler.current_shell_id)])
                         else:
-                            yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"char": key}, receiver = scheduler.current_shell_id)])
+                            # print("key: ", key)
+                            if scheduler.shell and scheduler.shell.session_task_id and scheduler.exists_task(scheduler.shell.session_task_id):
+                                yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"msg": key, "keys": []}, receiver = scheduler.shell.session_task_id)])
+                            else:
+                                yield Condition.get().load(sleep = 0, send_msgs = [Message.get().load({"char": key}, receiver = scheduler.current_shell_id)])
         except OSError as e:
             pass
     s.close()
