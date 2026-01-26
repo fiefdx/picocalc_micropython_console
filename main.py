@@ -30,7 +30,7 @@ from lib import sdcard
 # import font7
 from lib.display import ILI9488, Colors as C
 from lib.scheduler import Scheluder, Condition, Task, Message
-from lib.common import Resource, Time, exists, mkdirs
+from lib.common import Resource, Time, exists, mkdirs, KEYS_MAP
 from lib.shell import Shell
 from lib.keyboard import Keyboard
 # import settings_pico2 as settings
@@ -436,9 +436,11 @@ def shell(task, name, shell_id = 0, scheduler = None, display_id = None, storage
             c = msg.content["char"]
             s.input_char(c)
             if not s.disable_output and s is scheduler.shell:
-                yield condition_get().load(sleep = 0, send_msgs = [
-                    msg_get().load(s.get_display_frame(), receiver = display_id)
+                yield condition_get().load(sleep = 0, wait_msg = True, send_msgs = [
+                    msg_get().load(s.get_display_frame(), receiver = display_id, need_reply = True)
                 ])
+                r = task_get_msg()
+                r.release() 
         elif "output" in msg.content:
             output = msg.content["output"]
             s.write_lines(output, end = True)
@@ -490,57 +492,18 @@ def shell(task, name, shell_id = 0, scheduler = None, display_id = None, storage
         
         
 def keyboard_input(task, name, scheduler = None, interval = 50, display_id = None):
-    k = Keyboard(settings.keyboard_scl, settings.keyboard_sda, i2c = settings.keyboard_i2c, freq = settings.keyboard_baudrate)
-    key_map_ignore = {
-#         b'\x81': "F1",
-#         b'\x82': "F2",
-#         b'\x83': "F3",
-#         b'\x84': "F4",
-#         b'\x85': "F5",
-        # b'\x86': "F6",
-        # b'\x87': "F7",
-        b'\x88', # : "F8",
-        b'\x89', # : "F9",
-        b'\x90', # : "F10",
-        b'\xc1', # : "CAP",
-        b'\x1b[F', # : "END",
-        b'\x1b[H', # : "HOME",
-        b'\xd0', # : "BREAK",
-#         b'\x1b[3~': "DEL",
-        b'\x1b\xd1', # : "INS",
-    }
-    key_map = {
-        b'\x13': "SAVE",
-        b'\x01': "Ctrl-A",
-        b'\x02': "Ctrl-B",
-        b'\x03': "Ctrl-C",
-        b'\x07': "Ctrl-G",
-        b'\r': "Ctrl-M",
-        b'\x11': "Ctrl-Q",
-        b'\x14': "Ctrl-T",
-        b'\x16': "Ctrl-V",
-        b'\x18': "Ctrl-X",
-        b'\x1a': "Ctrl-Z",
-        b'\x0f': "Ctrl-/",
-        b'\x83': "BY",
-        b'\x85': "BA",
-        b'\x84': "BX",
-        b'\x1b[3~': "BB",
-        b'\x81': "F1",
-        b'\x82': "F2",
-        b'\x86': "F6",
-        b'\x87': "F7",
-    }
+    k = Keyboard(settings.keyboard_scl, settings.keyboard_sda, i2c = settings.keyboard_i2c, freq = settings.keyboard_baudrate)    
     Resource.keyboard = k
     condition_get = Condition.get
     msg_get = Message.get
+    task_get_msg = task.get_message
     yield condition_get().load(sleep = 1000)
     key_sound = const(2000)
     enable_sound = False
     keys = bytearray(30)
     
     def beep():
-        return condition_get().load(sleep = 0, send_msgs = [msg_get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id)])
+        return condition_get().load(sleep = 0, wait_msg = True, send_msgs = [msg_get().load({"freq": key_sound, "volume": 5000, "length": 5}, receiver = scheduler.sound_id, need_reply = True)])
     
     def switch_shell(idx):
         yield condition_get().load(sleep = 0, send_msgs = [
@@ -559,52 +522,53 @@ def keyboard_input(task, name, scheduler = None, interval = 50, display_id = Non
             
             yield condition_get().load(sleep = interval)
             n = k.readinto(keys)
-            if not n or n > 4:
-                continue
-            
-            # print("size: ", n)
-            # print("keys: ", keys[:n])
-            code = bytes(keys[:n])
-            # print("code: ", code, code in key_map)
-            if code in key_map_ignore:
-                continue
-            
-            key = key_map.get(code)
-            if key is None:
-                try:
-                    key = code.decode()
-                except:
-                    continue
-            
-            # print("key2: ", key)
-            if key == 'F1': # F1
-                if enable_sound:
-                    yield beep()
-                yield from switch_shell(0)
-            elif key == 'F2': # F2
-                if enable_sound:
-                    yield beep()
-                yield from switch_shell(1)
-            elif key == 'F6': # F6
-                if enable_sound:
-                    yield beep()
-                yield from switch_shell(2)
-            elif key == 'F7': # F7
-                if enable_sound:
-                    yield beep()
-                yield from switch_shell(3)
-            elif key == "Ctrl-M":
-                enable_sound = not enable_sound
-                if enable_sound:
-                    yield beep()
-            else:
-                shell = scheduler.shell
-                if enable_sound:
-                    yield beep()
-                if shell and shell.session_task_id and scheduler.exists_task(shell.session_task_id):
-                    yield condition_get().load(sleep = 0, send_msgs = [msg_get().load({"msg": key, "keys": [key]}, receiver = shell.session_task_id)])
-                else:
-                    yield condition_get().load(sleep = 0, send_msgs = [msg_get().load({"char": key}, receiver = scheduler.current_shell_id)])
+            if n:
+                for i in range(n):
+                    code = bytes(keys[i:i+1])
+                    # print("size:", n, ", code:", code)                    
+                    if code == b'\x81': # F1
+                        if enable_sound:
+                            yield beep()
+                            task_get_msg().release()
+                        yield from switch_shell(0)
+                    elif code == b'\x82': # F2
+                        if enable_sound:
+                            yield beep()
+                            task_get_msg().release()
+                        yield from switch_shell(1)
+                    elif code == b'\x86': # F6
+                        if enable_sound:
+                            yield beep()
+                            task_get_msg().release()
+                        yield from switch_shell(2)
+                    elif code == b'\x87': # F7
+                        if enable_sound:
+                            yield beep()
+                            task_get_msg().release()
+                        yield from switch_shell(3)
+                    elif code == b'\r':
+                        enable_sound = not enable_sound
+                        if enable_sound:
+                            yield beep()
+                            task_get_msg().release()
+                    else:
+                        key = KEYS_MAP.get(code)
+                        if key is None:
+                            continue
+                        
+                        shell = scheduler.shell
+                        if enable_sound:
+                            yield beep()
+                            msg = task_get_msg()
+                            msg.release()
+                        if shell and shell.session_task_id and scheduler.exists_task(shell.session_task_id):
+                            yield condition_get().load(sleep = 0, wait_msg = True, send_msgs = [msg_get().load({"msg": key, "keys": [key]}, receiver = shell.session_task_id, need_reply = True)])
+                            msg = task_get_msg()
+                            msg.release()
+                        else:
+                            yield condition_get().load(sleep = 0, wait_msg = True, send_msgs = [msg_get().load({"char": key}, receiver = scheduler.current_shell_id, need_reply = True)])
+                            msg = task_get_msg()
+                            msg.release()
         except Exception as e:
             buf = StringIO()
             sys.print_exception(e, buf)
@@ -616,12 +580,16 @@ def keyboard_input(task, name, scheduler = None, interval = 50, display_id = Non
 def sound_output(task, name, scheduler = None):
     condition_get = Condition.get
     task_get_msg = task.get_message
+    left_pwm = PWM(settings.pwm_left)
+    right_pwm = PWM(settings.pwm_right)
+    left_pwm.duty_u16(0)
+    right_pwm.duty_u16(0)
     while True:
         try:
             yield condition_get().load(sleep = 0, wait_msg = True)
             msg = task_get_msg()
-            left_pwm = PWM(settings.pwm_left)
-            right_pwm = PWM(settings.pwm_right)
+#             left_pwm = PWM(settings.pwm_left)
+#             right_pwm = PWM(settings.pwm_right)
             tone_freq = msg.content["freq"]
             tone_length = msg.content["length"]
             tone_volume = msg.content["volume"]
@@ -636,8 +604,8 @@ def sound_output(task, name, scheduler = None):
                 yield condition_get().load(sleep = tone_length)
             left_pwm.duty_u16(0)
             right_pwm.duty_u16(0)
-            left_pwm.deinit()
-            right_pwm.deinit()
+#             left_pwm.deinit()
+#             right_pwm.deinit()
             msg.release()
         except Exception as e:
             buf = StringIO()
@@ -676,7 +644,7 @@ if __name__ == "__main__":
         # s.set_log_to(shell_id)
         cursor_id = s.add_task(Task.get().load(cursor, "cursor", condition = Condition.get(), kwargs = {"interval": 500, "scheduler": s, "display_id": display_id, "storage_id": storage_id, "delay": 3000}))
         s.cursor_id = cursor_id
-        keyboard_id = s.add_task(Task.get().load(keyboard_input, "keyboard_input", condition = Condition.get(), kwargs = {"scheduler": s, "interval": 50, "display_id": display_id}))
+        keyboard_id = s.add_task(Task.get().load(keyboard_input, "keyboard_input", condition = Condition.get(), kwargs = {"scheduler": s, "interval": 100, "display_id": display_id}))
         settings.led.on()
         # settings.led.off()
         s.run()
