@@ -38,13 +38,15 @@ def main(*args, **kwargs):
             if max_length <= 40:
                 max_length = 40
             line = format_string % ("Name" + " " * (max_length - 11 - 4), "T", "    Size")
-            yield Condition.get().load(sleep = 0, send_msgs = [
-                Message.get().load({"output_part": line}, receiver = shell_id)
+            yield Condition.get().load(sleep = 0, wait_msg = True, send_msgs = [
+                Message.get().load({"output_part": line}, receiver = shell_id, need_reply = True)
             ])
+            task.get_message().release()
             line = "-" * max_length
-            yield Condition.get().load(sleep = 0, send_msgs = [
-                Message.get().load({"output_part": line}, receiver = shell_id)
+            yield Condition.get().load(sleep = 0, wait_msg = True, send_msgs = [
+                Message.get().load({"output_part": line}, receiver = shell_id, need_reply = True)
             ])
+            task.get_message().release()
             page_size = 28
             exit = False
             n = 2
@@ -71,9 +73,10 @@ def main(*args, **kwargs):
                             break
                         msg.release()
                     else:
-                        yield Condition.get().load(sleep = 0, send_msgs = [
-                            Message.get().load({"output_part": line}, receiver = shell_id)
+                        yield Condition.get().load(sleep = 0, wait_msg = True, send_msgs = [
+                            Message.get().load({"output_part": line}, receiver = shell_id, need_reply = True)
                         ])
+                        task.get_message().release()
             if not exit:
                 fs = os.ilistdir(path)
                 for f in fs:
@@ -99,21 +102,23 @@ def main(*args, **kwargs):
                                 break
                             msg.release()
                         else:
-                            yield Condition.get().load(sleep = 0, send_msgs = [
-                                Message.get().load({"output_part": line}, receiver = shell_id)
+                            yield Condition.get().load(sleep = 0, wait_msg = True, send_msgs = [
+                                Message.get().load({"output_part": line}, receiver = shell_id, need_reply = True)
                             ])
+                            task.get_message().release()
             if not exit:
                 line = "-" * max_length
-                yield Condition.get().load(sleep = 0, send_msgs = [
-                    Message.get().load({"output_part": line}, receiver = shell_id)
+                yield Condition.get().load(sleep = 0, wait_msg = True, send_msgs = [
+                    Message.get().load({"output_part": line}, receiver = shell_id, need_reply = True)
                 ])
                 line = "Total: %s, Dirs: %s, Files: %s" % (dirs_total + files_total, dirs_total, files_total)
-                yield Condition.get().load(sleep = 0, send_msgs = [
-                    Message.get().load({"output": line}, receiver = shell_id)
+                yield Condition.get().load(sleep = 0, wait_msg = True, send_msgs = [
+                    Message.get().load({"output": line}, receiver = shell_id, need_reply = True)
                 ])
+                task.get_message().release()
             else:
-                yield Condition.get().load(sleep = 0, send_msgs = [
-                    Message.get().load({"output": ""}, receiver = shell_id)
+                yield Condition.get().load(sleep = 0, wait_msg = True, send_msgs = [
+                    Message.get().load({"output": ""}, receiver = shell_id, need_reply = True)
                 ])
         else:
             yield Condition.get().load(sleep = 0, send_msgs = [
