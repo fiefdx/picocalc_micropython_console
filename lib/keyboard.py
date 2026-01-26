@@ -130,7 +130,7 @@ class Keyboard:
                 state = keyGot[0]
                 key = keyGot[1]
                 if state == _StatePress or state == _StateLongPress:
-
+                    # print("input: ", key, hex(key))
                     if key == 0xa2 or key == 0xa3:
                         self.isShift = True
                     elif key == 0xa5:
@@ -138,57 +138,25 @@ class Keyboard:
                     elif key == 0xa1:
                         self.isAlt = True
                     else:
-                        #check current shift/ctrl/alt state
-                        modifier=b''
-                        if self.isShift and self.isAlt and (not self.isCtrl):
-                            modifier=b';4'
-                        elif self.isShift and self.isCtrl and (not self.isAlt):
-                            modifier=b';6'
-                        elif self.isAlt and self.isCtrl and (not self.isShift):
-                            modifier=b';7'
-                        elif self.isShift and self.isCtrl and self.isAlt:
-                            modifier=b';8'
-                        elif self.isAlt and (not self.isCtrl) and (not self.isShift):
-                            modifier=b';3'
-                        elif (not self.isAlt) and self.isCtrl and (not self.isShift):
-                            modifier=b';5'
-                        elif (not self.isAlt) and (not self.isCtrl) and self.isShift:
-                            modifier=b';2'
-
                         if key >=0xB4 and key <= 0xB7:
-                        #direction keys
-                            #self.hardwarekeyBuf.append(0x1b)
-                            #self.hardwarekeyBuf.append(ord('['))
-                            if modifier != b'':
-                                parameters = b'1'
-                            else:
-                                parameters = b''
-                            if key == 0xB4:
-                                self.hardwarekeyBuf.extend(b'LT')
-                            elif key == 0xB5:
-                                self.hardwarekeyBuf.extend(b'UP')
-                            elif key == 0xB6:
-                                self.hardwarekeyBuf.extend(b'DN')
-                            elif key == 0xB7:
-                                self.hardwarekeyBuf.extend(b'RT')
+                            self.hardwarekeyBuf.append(key)
                         elif key == 0x0A:
+                            self.hardwarekeyBuf.append(key)
                             # self.hardwarekeyBuf.append(ord('\r'))
-                            self.hardwarekeyBuf.append(ord('\n')) #return key
+                            # self.hardwarekeyBuf.append(ord('\n')) #return key
                         elif key == 0xB1:  # KEY_ESC
-                            self.hardwarekeyBuf.extend(b'ES')
+                            self.hardwarekeyBuf.append(key)
                         elif key == 0xD2: #KEY_HOME
-                            self.hardwarekeyBuf.extend(b'\x1b[H')
+                            self.hardwarekeyBuf.append(key)
                         elif key == 0xD5: #end
-                            self.hardwarekeyBuf.extend(b'\x1b[F')
+                            self.hardwarekeyBuf.append(key)
                         elif key == 0x08: #backspace
-                            self.hardwarekeyBuf.append(ord('\b'))
+                            self.hardwarekeyBuf.append(key)
                         elif key == 0xD4: #delete
-                            self.hardwarekeyBuf.extend(b'\x1b[3'+modifier+b'~')
+                            self.hardwarekeyBuf.append(key)
                         else:
                             if self.isAlt == True:
-                                if key !=ord(' ') and key!=ord(',') and key!=ord('.'):
-                                    self.hardwarekeyBuf.extend(b'\x1b')#to match the vt100 terminal style
-                                    self.hardwarekeyBuf.append(key)
+                                pass
                             elif self.isCtrl == True:
                                 self.hardwarekeyBuf.append(key&0x1F)
                             else:
@@ -217,9 +185,6 @@ class Keyboard:
             buf[-keysLeft]=key
             keysLeft -=1
 
-        #print("read buff")
-        #print(buf)
-        #print(requestedkeys-keysLeft)
         if requestedkeys-keysLeft == 0:
             return None
         else:
