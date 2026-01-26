@@ -373,6 +373,7 @@ class Shell(object):
                     Task.get().load(sys.modules[module].main, cmd, condition = Condition.get(), kwargs = {"args": args[1:],
                                                                                                "shell_id": self.scheduler.current_shell_id,
                                                                                                "shell_obj_id": self.shell_id,
+                                                                                               "display_id": self.display_id,
                                                                                                "shell": self}, need_to_clean = [sys.modules[module]])
                 ) # execute cmd
             else:
@@ -400,6 +401,7 @@ class Shell(object):
                         Task.get().load(sys.modules[module].main, cmd, condition = Condition.get(), kwargs = {"args": args[1:],
                                                                                                    "shell_id": self.scheduler.current_shell_id,
                                                                                                    "shell_obj_id": self.shell_id,
+                                                                                                   "display_id": self.display_id,
                                                                                                    "shell": self}, need_to_clean = [sys.modules[module]], reset_sys_path = True)
                     ) # execute cmd
                 else:
