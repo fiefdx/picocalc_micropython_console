@@ -16,33 +16,49 @@ class Message(object):
     @classmethod
     def get(cls):
         for m in cls.pool:
-            if m.processed:
+            if m.processed and m.replied:
                 m.processed = False
+                m.replied = False
                 return m
+
+    @classmethod
+    def need_to_reply(cls):
+        for m in cls.pool:
+            if m.processed and not m.replied:
+                yield m
             
     @classmethod
     def remain(cls):
         return sum(1 for m in cls.pool if m.processed)
 
-    def __init__(self, content, sender = None, sender_name = "", receiver = None, processed = False, drop_size = 1):
-        self.load(content, sender, sender_name, receiver, processed)
+    def __init__(self, content, sender = None, sender_name = "", receiver = None, processed = False, drop_size = 1, need_reply = False):
+        self.load(content, sender, sender_name, receiver, processed, drop_size, need_reply)
 
-    def load(self, content, sender = None, sender_name = "", receiver = None, processed = False, drop_size = 1):
+    def load(self, content, sender = None, sender_name = "", receiver = None, processed = False, drop_size = 1, need_reply = False):
         self.content = content
         self.sender = sender
         self.sender_name = sender_name
         self.receiver = receiver
         self.processed = processed
         self.drop_size = drop_size
+        self.need_reply = need_reply
+        self.replied = True
         return self
 
     def release(self):
-        # del self.content
-        self.content = ""
-        self.sender = None
-        # del self.sender_name
-        self.sender_name = ""
-        self.receiver = None
+        if self.need_reply:
+            self.sender, self.receiver = self.receiver, self.sender
+            self.content = self.sender_name
+            self.need_reply = False
+            self.replied = False
+        else:
+            # del self.content
+            self.content = ""
+            self.sender = None
+            # del self.sender_name
+            self.sender_name = ""
+            self.receiver = None
+            self.replied = True
         self.processed = True
 
 
@@ -145,6 +161,7 @@ class Task(object):
             self.msgs.append(message)
             self.msgs_senders.append(message.sender)
         else:
+            # print("drop message:", message.content)
             message.release()
         
     def get_message(self, sender = None):
@@ -231,9 +248,9 @@ class Scheluder(object):
     def get_task(self, task_id):
         return self.tasks_ids.get(task_id)
         
-    def send_msg(self, msg):
-        self.msgs.put(msg)
-        
+#     def send_msg(self, msg):
+#         self.msgs.put(msg)
+         
     def mem_free(self):
         return gc.mem_free()
     
@@ -283,6 +300,7 @@ class Scheluder(object):
 #                         s = ticks_us()
                     if peek.ready():
                         # print("ready: %s" % peek.id)
+                        # processing tasks
                         self.current = self.tasks.pop(0)
                         task_start_at = ticks_us()
                         try:
@@ -346,6 +364,14 @@ class Scheluder(object):
                                 # del self.current
                             self.current = None
 #                                 self.cpu_time_ms += ticks_diff(ticks_us(), s) / 1000
+
+                        # processing messages
+                        for msg in Message.need_to_reply():
+                            msg.processed = False
+                            if msg.receiver in self.tasks_ids:
+                                self.tasks_ids[msg.receiver].put_message(msg)
+                            else:
+                                msg.release()
                     else:
                         sleep_us(self.task_sleep_interval)
                         self.sleep_ms += self.task_sleep_interval / 1000
