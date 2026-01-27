@@ -37,7 +37,7 @@ def main(*args, **kwargs):
         buf = bytearray(6)
         Resource.keyboard.readinto(buf)
         keys = bytes(buf)
-        while b"ES" not in keys:
+        while b'\xb1' not in keys: # ES
             if n % 2048 == 0:
                 yield Condition.get().load(sleep = 0, send_msgs = [
                     Message.get().load({"output_part": "download: %.2fKB" % (total / 1024)}, receiver = shell_id)
@@ -52,7 +52,7 @@ def main(*args, **kwargs):
             Resource.keyboard.readinto(buf)
             keys = bytes(buf)
         fp.close()
-        if b"ES" in keys:
+        if b'\xb1' in keys: # ES
             yield Condition.get().load(sleep = 0, send_msgs = [
                 Message.get().load({"output": "download partially: %.2fKB" % (total / 1024)}, receiver = shell_id)
             ])
