@@ -267,7 +267,15 @@ def display(task, name, scheduler = None):
 #                                     wri.printstring(clear_line)
                             else:
                                 rect(0 , n * line_height + y_offset, 320, (n + 1) * line_height, black, True)
-                                text(l, x, n * line_height + y_offset, white)
+                                if l[0] == "\x00":
+                                    if l[0:3] == "\x00\x00\x00":
+                                        text(">>>", x, n * line_height + y_offset, C.red)
+                                        text(l[3:], x + 24, n * line_height + y_offset, white)
+                                    else:
+                                        text(">", x, n * line_height + y_offset, C.red)
+                                        text(l[1:], x + 8, n * line_height + y_offset, white)
+                                else:
+                                    text(l, x, n * line_height + y_offset, white)
 #                                     wri.set_textpos(lcd, n, 0)
 #                                     wri.printstring(clear_line)
 #                                     wri.set_textpos(lcd, n, 0)
