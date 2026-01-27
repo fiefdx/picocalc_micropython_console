@@ -11,7 +11,7 @@ from lib import sdcard
 from lib.display import ILI9488, Colors as C
 from lib.keyboard import Keyboard
 from lib import uftpd
-from lib.common import exists
+from lib.common import exists, KEYS_MAP
 # import settings_pico2 as settings
 import settings_esp32s2 as settings
 
@@ -123,10 +123,10 @@ if __name__ == "__main__":
     while running:
         try:
             n = k.readinto(keys)
-            if n and n <= 2:
-                code = bytes(keys[:n])
+            if n:
+                code = bytes(keys[:1])
                 try:
-                    key = code.decode()
+                    key = KEYS_MAP.get(code)
                     if key == "UP":
                         cursor_pos_previous = cursor_pos
                         cursor_pos -= 1
@@ -178,5 +178,7 @@ if __name__ == "__main__":
         time.sleep_ms(50)
     if exists("/main.shell.py"):
         os.rename("/main.py", "/main.ftp.py")
+        time.sleep_ms(100)
         os.rename("/main.shell.py", "/main.py")
+        time.sleep_ms(100)
         soft_reset()
