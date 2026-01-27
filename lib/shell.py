@@ -1,5 +1,6 @@
 import sys
 import uos
+from io import StringIO
 from math import ceil
 from micropython import const
 
@@ -364,8 +365,10 @@ class Shell(object):
         try:
             if module not in sys.modules:
                 #import_str = "from bin import %s" % module
-                import_str = "import %s; sys.modules['%s'] = %s" % (module, module, module)
-                exec(import_str)
+                # globals()[module] = __import__(module)
+                sys.modules[module] = __import__(module) # globals()[module]
+                # import_str = "import %s; sys.modules['%s'] = %s" % (module, module, module)
+                # exec(import_str)
             if sys.modules[module].coroutine:
                 #bin.__dict__[]
                 #self.session_task_id = self.scheduler.add_task(Task(bin.__dict__[module].main, cmd, kwargs = {"args": args[1:], "shell_id": self.scheduler.shell_id, "shell": self}, need_to_clean = [bin.__dict__[module]])) # execute cmd
@@ -381,8 +384,10 @@ class Shell(object):
                     Message.get().load({"cmd": cmd}, receiver = self.storage_id)
                 ])
         except Exception as e:
+            buf = StringIO()
+            sys.print_exception(e, buf)
             yield Condition.get().load(sleep = 0, wait_msg = False, send_msgs = [
-                Message.get().load({"output": "error: %s" % e}, receiver = self.scheduler.current_shell_id)
+                Message.get().load({"output": "error: %s" % buf.getvalue()}, receiver = self.scheduler.current_shell_id)
             ])
 
     def run_script_coroutine(self, task, cmd):
@@ -394,8 +399,10 @@ class Shell(object):
             try:
                 sys.path.insert(0, module_path)
                 if module not in sys.modules:
-                    import_str = "import %s; sys.modules['%s'] = %s" % (module, module, module)
-                    exec(import_str)
+                    # globals()[module] = __import__(module)
+                    sys.modules[module] = __import__(module) # globals()[module]
+                    # import_str = "import bin; from bin import %s; sys.modules['%s'] = %s" % (module, module, module)
+                    # exec(import_str)
                 if sys.modules[module].coroutine:
                     self.session_task_id = self.scheduler.add_task(
                         Task.get().load(sys.modules[module].main, cmd, condition = Condition.get(), kwargs = {"args": args[1:],
@@ -410,8 +417,10 @@ class Shell(object):
                         Message.get().load({"output": "it's not a coroutine script!"}, receiver = self.scheduler.current_shell_id)
                     ])
             except Exception as e:
+                buf = StringIO()
+                sys.print_exception(e, buf)
                 yield Condition.get().load(sleep = 0, wait_msg = False, send_msgs = [
-                    Message.get().load({"output": "error: %s" % e}, receiver = self.scheduler.current_shell_id)
+                    Message.get().load({"output": "error: %s" % buf.getvalue()}, receiver = self.scheduler.current_shell_id)
                 ])
         else:
             yield Condition.get().load(sleep = 0, wait_msg = False, send_msgs = [

@@ -354,13 +354,16 @@ def storage(task, name, scheduler = None):
                 #if "/sd/usr" not in sys.path:
                 #    sys.path.insert(0, "/sd/usr")
                 if module not in sys.modules:
-                    import_str = "import %s; sys.modules['%s'] = %s" % (module, module, module)
-                    exec(import_str)
+                    # import_str = "import %s; sys.modules['%s'] = %s" % (module, module, module)
+                    # exec(import_str)
+                    # globals()[module] = __import__(module)
+                    sys.modules[module] = __import__(module) # globals()[module]
                 if module in ("mount", "umount"):
                     output, sd, vfs = sys.modules["%s" % module].main(*args[1:], shell_id = scheduler.current_shell_id, sd = sd, vfs = vfs, spi = spi, sd_cs = settings.sd_cs)
                 else:
                     output = sys.modules["%s" % module].main(*args[1:], shell_id = scheduler.current_shell_id, scheduler = scheduler)
-                exec("del %s" % module)
+                # exec("del %s" % module)
+                # del globals()[module]
                 del sys.modules["%s" % module].main
                 del sys.modules["%s" % module]
                 gc.collect()
@@ -645,7 +648,7 @@ if __name__ == "__main__":
         # s.set_log_to(shell_id)
         cursor_id = s.add_task(Task.get().load(cursor, "cursor", condition = Condition.get(), kwargs = {"interval": 500, "scheduler": s, "display_id": display_id, "storage_id": storage_id, "delay": 3000}))
         s.cursor_id = cursor_id
-        keyboard_id = s.add_task(Task.get().load(keyboard_input, "keyboard_input", condition = Condition.get(), kwargs = {"scheduler": s, "interval": 50, "display_id": display_id}))
+        keyboard_id = s.add_task(Task.get().load(keyboard_input, "keyboard_input", condition = Condition.get(), kwargs = {"scheduler": s, "interval": 30, "display_id": display_id}))
         settings.led.on()
         # settings.led.off()
         s.run()
