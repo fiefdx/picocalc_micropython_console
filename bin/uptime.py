@@ -29,7 +29,6 @@ def main(*args, **kwargs):
     except Exception as e:
         buf = StringIO()
         sys.print_exception(e, buf)
-        reason = buf.getvalue()
         yield Condition.get().load(sleep = 0, send_msgs = [
-            Message.get().load({"output": reason}, receiver = shell_id)
+            Message.get().load({"output": buf.getvalue()}, receiver = shell_id)
         ])

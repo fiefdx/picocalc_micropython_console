@@ -1,5 +1,6 @@
 import sys
 import uos
+from io import StringIO
 
 from lib.scheduler import Condition, Message
 from lib.common import exists, path_join, abs_path
@@ -38,6 +39,7 @@ def main(*args, **kwargs):
                                 yield Condition.get().load(sleep = 0, wait_msg = True)
                                 msg = task.get_message()
                             if msg.content["msg"] == "ES":
+                                msg.release()
                                 break
                             msg.release()
                         else:
@@ -57,6 +59,8 @@ def main(*args, **kwargs):
                 Message.get().load({"output": result}, receiver = shell_id)
             ])
     except Exception as e:
+        buf = StringIO()
+        sys.print_exception(e, buf)
         yield Condition.get().load(sleep = 0, send_msgs = [
-            Message.get().load({"output": sys.print_exception(e)}, receiver = shell_id)
+            Message.get().load({"output": buf.getvalue()}, receiver = shell_id)
         ])

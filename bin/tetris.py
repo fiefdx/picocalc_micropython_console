@@ -645,7 +645,7 @@ def main(*args, **kwargs):
                 }, receiver = display_id)
             ])
             c = None
-            keys= []
+            keys = []
             msg = task.get_message()
             if msg:
                 c = msg.content["msg"]

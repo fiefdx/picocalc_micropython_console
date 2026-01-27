@@ -43,7 +43,7 @@ def main(*args, **kwargs):
                         analyze_frames = 0
                         analyze_loop = 10
                         ts = ticks_cpu()
-                        while b"ES" not in keys and analyze_loop:
+                        while b'\xb1' not in keys and analyze_loop: # ES
                             t = ticks_cpu()
                             frames = f.readframes(1024)
                             if not frames:
@@ -66,7 +66,7 @@ def main(*args, **kwargs):
                         print(analyze_frames * (1000000 / framerate), ticks_diff(te, ts))
                         print("analyzed_interval: ", analyzed_interval, (analyze_frames * (1000000 / framerate) - ticks_diff(te, ts)) / analyze_frames)
                         f.setpos(0)
-                        while b"ES" not in keys:
+                        while b'\xb1' not in keys: # ES
                             t = ticks_cpu()
                             frames = f.readframes(1024)
                             if not frames:
@@ -88,7 +88,7 @@ def main(*args, **kwargs):
                         analyze_frames = 0
                         analyze_loop = 10
                         ts = ticks_cpu()
-                        while b"ES" not in keys and analyze_loop:
+                        while b'\xb1' not in keys and analyze_loop: # ES
                             frames = f.readframes(1024)
                             if not frames:
                                 break
@@ -111,7 +111,7 @@ def main(*args, **kwargs):
                         print(analyze_frames * (1000000 / framerate), ticks_diff(te, ts))
                         print("analyzed_interval: ", analyzed_interval, (analyze_frames * (1000000 / framerate) - ticks_diff(te, ts)) / analyze_frames)
                         f.setpos(0)
-                        while b"ES" not in keys:
+                        while b'\xb1' not in keys: # ES
                             frames = f.readframes(1024)
                             if not frames:
                                 break

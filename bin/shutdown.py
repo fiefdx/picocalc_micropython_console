@@ -1,9 +1,9 @@
 import sys
 from machine import Pin, I2C
+from io import StringIO
 
 from lib.scheduler import Condition, Message
 from lib.common import exists, path_join
-from lib.ds3231 import ds3231
 
 coroutine = True
 
@@ -13,14 +13,12 @@ def main(*args, **kwargs):
     args = kwargs["args"]
     shell_id = kwargs["shell_id"]
     try:
-        i2c = I2C(1, scl=Pin(27), sda=Pin(26), freq=100000)
-        ups = ds3231(i2c)
-        ups.power_off()
         yield Condition.get().load(sleep = 0, send_msgs = [
-            Message.get().load({"output": "shutdown ..."}, receiver = shell_id)
+            Message.get().load({"output": "not implemented yet!"}, receiver = shell_id)
         ])
     except Exception as e:
+        buf = StringIO()
+        sys.print_exception(e, buf)
         yield Condition.get().load(sleep = 0, send_msgs = [
-            Message.get().load({"output": str(sys.print_exception(e))}, receiver = shell_id)
+            Message.get().load({"output": buf.getvalue()}, receiver = shell_id)
         ])
-

@@ -1,5 +1,6 @@
 import sys
 import socket
+from io import StringIO
 
 from lib.scheduler import Task, Condition, Message
 from lib.common import exists, path_join, KEYS_MAP
@@ -114,6 +115,8 @@ def main(*args, **kwargs):
                 Message.get().load({"output": "Usage: remoteinput start|stop|status"}, receiver = shell_id)
             ])
     except Exception as e:
+        buf = StringIO()
+        sys.print_exception(e, buf)
         yield Condition.get().load(sleep = 0, send_msgs = [
-            Message.get().load({"output": str(sys.print_exception(e))}, receiver = shell_id)
+            Message.get().load({"output": buf.getvalue()}, receiver = shell_id)
         ])
