@@ -22,6 +22,10 @@ def main(*args, **kwargs):
                     yield Condition.get().load(sleep = 0, send_msgs = [
                         Message.get().load({"output": "sync failed"}, receiver = shell_id)
                     ])
+            elif args[0] == "-h":
+                yield Condition.get().load(sleep = 0, send_msgs = [
+                    Message.get().load({"output": Time.now_hardware()}, receiver = shell_id)
+                ])
             else:
                 yield Condition.get().load(sleep = 0, send_msgs = [
                     Message.get().load({"output": Time.now()}, receiver = shell_id)

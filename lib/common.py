@@ -409,8 +409,11 @@ class Time(object):
     @classmethod
     def now(cls):
         now = cls.machine_rtc.datetime()
-        if cls.rtc:
-            now = cls.rtc.datetime()
+        return "%04d-%02d-%02d %02d:%02d:%02d %s" % (now[0], now[1], now[2], now[4], now[5], now[6], cls.days[now[3] % 7])
+
+    @classmethod
+    def now_hardware(cls):
+        now = cls.rtc.datetime()
         return "%04d-%02d-%02d %02d:%02d:%02d %s" % (now[0], now[1], now[2], now[4], now[5], now[6], cls.days[now[3] % 7])
     
     @classmethod
