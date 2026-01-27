@@ -31,10 +31,10 @@ class Message(object):
     def remain(cls):
         return sum(1 for m in cls.pool if m.processed)
 
-    def __init__(self, content, sender = None, sender_name = "", receiver = None, processed = False, drop_size = 1, need_reply = False):
+    def __init__(self, content, sender = None, sender_name = "", receiver = None, processed = False, drop_size = 0, need_reply = False):
         self.load(content, sender, sender_name, receiver, processed, drop_size, need_reply)
 
-    def load(self, content, sender = None, sender_name = "", receiver = None, processed = False, drop_size = 1, need_reply = False):
+    def load(self, content, sender = None, sender_name = "", receiver = None, processed = False, drop_size = 0, need_reply = False):
         self.content = content
         self.sender = sender
         self.sender_name = sender_name
@@ -157,7 +157,10 @@ class Task(object):
         self.condition = condition
         
     def put_message(self, message):
-        if len(self.msgs) < message.drop_size:
+        if message.drop_size == 0:
+            self.msgs.append(message)
+            self.msgs_senders.append(message.sender)
+        elif len(self.msgs) < message.drop_size:
             self.msgs.append(message)
             self.msgs_senders.append(message.sender)
         else:
@@ -329,7 +332,8 @@ class Scheluder(object):
                                 for m in self.current.need_to_clean:
                                     try:
                                         m_name = m.__name__
-                                        exec("del %s" % m.__name__)
+                                        # del globals()[m.__name__]
+                                        # exec("del %s" % m.__name__)
                                         # exec("del %s" % m.__name__.split(".")[-1])
                                         if hasattr(m, "main"):
                                             del m.main
